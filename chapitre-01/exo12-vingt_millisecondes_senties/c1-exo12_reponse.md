@@ -2,7 +2,7 @@
 
 ## Programme
 
-J'ai fait un petit programme Python (pygame) qui affiche un cercle qui suit la souris avec un retard réglable (slider de 0 à 200 ms). 5 personnes l'ont testé.
+J'ai fait un petit programme sur ecran ordinaire S qui affiche un cercle qui suit la souris avec un retard réglable (slider de 0 à 200 ms). 5 personnes l'ont testé.
 
 ## Seuils de détection (retard à partir lequel la personne dit « ah oui je le sens »)
 

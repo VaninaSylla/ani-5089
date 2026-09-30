@@ -17,14 +17,19 @@ int main() {
     std::cin.tie(nullptr);
 
     int D;
-    if (!(std::cin >> D)) return 0;
+    if (!(std::cin >> D)) {
+        return 0;
+    }
     std::string line;
     std::getline(std::cin, line);
 
     std::vector<Device> devices;
     for (int i = 0; i < D; ++i) {
         std::getline(std::cin, line);
-        if (line.empty()) { --i; continue; }
+        if (line.empty()) {
+            --i;
+            continue;
+        }
         std::istringstream iss(line);
         Device d;
         iss >> d.serial >> d.state >> d.model;
@@ -42,7 +47,7 @@ int main() {
                 if (d.state == "device") {
                     std::cout << d.serial << "\n";
                 } else {
-                    std::cout << "ERREUR " << d.serial << " " << d.state << "\n";
+                    std::cout << "ERREUR " << d.serial << " est " << d.state << "\n";
                 }
                 break;
             }

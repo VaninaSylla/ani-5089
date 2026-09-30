@@ -10,7 +10,9 @@ int main() {
 
     std::string targetArch;
     std::getline(std::cin, targetArch);
-    if (targetArch.empty()) return 0;
+    if (targetArch.empty()) {
+        return 0;
+    }
 
     int F;
     std::string line;
@@ -26,7 +28,10 @@ int main() {
 
     for (int i = 0; i < F; ++i) {
         std::getline(std::cin, line);
-        if (line.empty()) { --i; continue; }
+        if (line.empty()) {
+            --i;
+            continue;
+        }
         std::istringstream iss(line);
         std::string path;
         long long size;
@@ -36,7 +41,8 @@ int main() {
         if (path.rfind("META-INF/", 0) == 0) {
             if (path.size() >= 4) {
                 std::string ext = path.substr(path.size() - 4);
-                if (ext == ".RSA" || ext == ".DSA" || (path.size() >= 3 && path.substr(path.size() - 3) == ".EC")) {
+                if (ext == ".RSA" || ext == ".DSA" ||
+                    (path.size() >= 3 && path.substr(path.size() - 3) == ".EC")) {
                     signed_ = true;
                 }
             }

@@ -1,0 +1,9 @@
+Ce que la trace apprend :
+La trace indique un SIGSEGV (signal 11) à l'adresse 0x0, ce qui confirme un déréférencement de pointeur nul. Le backtrace montre que le crash se produit dans la fonction main à l'offset +0x1c, ce qui correspond à la ligne `*ptr = 42;` dans plantage.cpp. Le programme s'appelle MaSalle (package com.example.masalle) et la bibliothèque native est libmasalle.so pour l'architecture arm64.
+
+Ce que la trace n'apprend pas :
+- Elle ne donne pas le nom exact de la variable (ptr) ni le numéro de ligne exact dans le source C++, seulement l'offset dans le binaire.
+- Sans symboles de débogage (build en Release sans -g), les noms de fonctions peuvent être mangled ou absents, et les numéros de ligne ne sont pas disponibles.
+- Elle ne dit pas POURQUOI le pointeur est nul (logique métier, entrée invalide, race condition, etc.).
+- Elle ne montre pas l'état des autres threads au moment du crash.
+- Elle ne permet pas de reproduire le bug si ce dernier dépend d'un timing ou d'un état spécifique.

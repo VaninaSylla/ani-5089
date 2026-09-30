@@ -13,7 +13,9 @@ int main() {
     std::cin.tie(nullptr);
 
     int N;
-    if (!(std::cin >> N)) return 0;
+    if (!(std::cin >> N)) {
+        return 0;
+    }
     std::string line;
     std::getline(std::cin, line);
 

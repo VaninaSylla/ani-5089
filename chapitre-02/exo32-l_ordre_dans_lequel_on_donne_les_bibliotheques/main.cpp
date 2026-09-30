@@ -20,10 +20,7 @@ int main() {
     std::unordered_map<std::string, std::vector<std::string>> deps;
     for (int i = 0; i < N; ++i) {
         std::getline(std::cin, line);
-        if (line.empty()) {
-            --i;
-            continue;
-        }
+        if (line.empty()) { --i; continue; }
         std::istringstream iss(line);
         std::string module;
         iss >> module;
@@ -77,6 +74,7 @@ int main() {
         }
     }
 
+    std::vector<std::string> result;
     std::priority_queue<std::string, std::vector<std::string>, std::greater<std::string>> pq;
     for (const auto& kv : inDegree) {
         if (kv.second == 0) {
@@ -84,12 +82,10 @@ int main() {
         }
     }
 
-    size_t processed = 0;
     while (!pq.empty()) {
         std::string cur = pq.top();
         pq.pop();
-        std::cout << cur << "\n";
-        processed++;
+        result.push_back(cur);
         for (const auto& d : deps[cur]) {
             if (all.count(d)) {
                 inDegree[d]--;
@@ -100,8 +96,12 @@ int main() {
         }
     }
 
-    if (processed != all.size()) {
+    if (result.size() != all.size()) {
         std::cout << "CYCLE\n";
+    } else {
+        for (const auto& m : result) {
+            std::cout << m << "\n";
+        }
     }
 
     return 0;

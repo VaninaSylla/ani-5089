@@ -1,0 +1,8 @@
+Ce que la trace apprend :
+La trace indique un SIGSEGV (signal 11) à l'adresse 0x0, confirmant un déréférencement de pointeur nul. Le backtrace montre le crash dans LireHauteurPlafond()+12 (offset 12 dans la fonction), appelée depuis android_main+48. Le package est cm.enspy.masalle, la bibliothèque native est libMaSalle.so pour l'architecture arm64. La variable fautive est gHauteurPlafond (pointeur global nul initialisé à nullptr).
+
+Ce que la trace n'apprend pas :
+- Sans symboles de débogage (-g), le numéro de ligne exact n'est pas visible (seul l'offset +12 dans LireHauteurPlafond).
+- Elle ne dit pas POURQUOI gHauteurPlafond est nul (initialisation manquée, logique métier, entrée invalide, race condition, etc.).
+- Elle ne montre pas l'état des autres threads au moment du crash.
+- Elle ne permet pas de reproduire le bug si ce dernier dépend d'un timing ou d'un état spécifique.

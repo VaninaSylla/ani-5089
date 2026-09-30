@@ -1,0 +1,9 @@
+Build/
+*.exe
+*.lib
+*.dll
+*.o
+*.obj
+NkentseuKit/
+**/NkentseuKit/
+**/include/NKentseuKit/

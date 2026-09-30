@@ -11,14 +11,19 @@ int main() {
     std::cin.tie(nullptr);
 
     int V;
-    if (!(std::cin >> V)) return 0;
+    if (!(std::cin >> V)) {
+        return 0;
+    }
     std::string line;
     std::getline(std::cin, line);
 
     std::unordered_map<std::string, std::string> machine;
     for (int i = 0; i < V; ++i) {
         std::getline(std::cin, line);
-        if (line.empty()) { --i; continue; }
+        if (line.empty()) {
+            --i;
+            continue;
+        }
         size_t eq = line.find("=");
         if (eq != std::string::npos) {
             std::string key = line.substr(0, eq);
@@ -33,13 +38,18 @@ int main() {
 
     for (int i = 0; i < F; ++i) {
         std::getline(std::cin, line);
-        if (line.empty()) { --i; continue; }
+        if (line.empty()) {
+            --i;
+            continue;
+        }
 
         std::vector<std::string> terms;
         std::istringstream iss(line);
         std::string term;
         while (iss >> term) {
-            if (term == "&&") continue;
+            if (term == "&&") {
+                continue;
+            }
             terms.push_back(term);
         }
 
@@ -64,7 +74,9 @@ int main() {
             if (it != machine.end() && it->second == val) {
                 termVal = true;
             }
-            if (neg) termVal = !termVal;
+            if (neg) {
+                termVal = !termVal;
+            }
             if (!termVal) {
                 allTrue = false;
                 break;

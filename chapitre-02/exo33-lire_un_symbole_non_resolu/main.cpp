@@ -11,14 +11,19 @@ int main() {
     std::cin.tie(nullptr);
 
     int P;
-    if (!(std::cin >> P)) return 0;
+    if (!(std::cin >> P)) {
+        return 0;
+    }
     std::string line;
     std::getline(std::cin, line);
 
     std::vector<std::pair<std::string, std::string>> prefixes;
     for (int i = 0; i < P; ++i) {
         std::getline(std::cin, line);
-        if (line.empty()) { --i; continue; }
+        if (line.empty()) {
+            --i;
+            continue;
+        }
         std::istringstream iss(line);
         std::string prefix, module;
         iss >> prefix >> module;
@@ -40,11 +45,18 @@ int main() {
     for (int i = 0; i < L; ++i) {
         std::getline(std::cin, line);
         size_t pos = line.find("undefined reference to");
-        if (pos == std::string::npos) continue;
-        pos += 22; // length of "undefined reference to"
-        while (pos < line.size() && (line[pos] == ' ' || line[pos] == '\t' || line[pos] == '\'')) pos++;
+        if (pos == std::string::npos) {
+            continue;
+        }
+        pos += 22;  // length of "undefined reference to"
+        while (pos < line.size() &&
+               (line[pos] == ' ' || line[pos] == '\t' || line[pos] == '\'')) {
+            pos++;
+        }
         size_t end = line.find("'", pos);
-        if (end == std::string::npos) continue;
+        if (end == std::string::npos) {
+            continue;
+        }
         std::string symbol = line.substr(pos, end - pos);
 
         bool found = false;

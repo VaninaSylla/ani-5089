@@ -1,0 +1,18 @@
+# Fichier de projet Jenga pour exo9 - défaut accumulateur (Win32 pur)
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+with workspace("AccumulateurWks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    with project("AccumulateurTest"):
+        windowedapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["src/**.cpp"])
+        links(["user32", "gdi32"])
+        usetoolchain("clang-mingw")

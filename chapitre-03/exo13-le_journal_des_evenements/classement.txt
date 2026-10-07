@@ -1,0 +1,4 @@
+souris : 2885
+sortie_pointeur : 3
+entree_pointeur : 2
+redimensionnement : 2

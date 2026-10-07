@@ -1,0 +1,11 @@
+Le type qui m'a le plus surpris est "souris"
+
+Dans une vraie session d'une minute, le type "souris" domine écrasamment avec 2885 occurrences alors que les autres types sont très rares : "sortie_pointeur" (3), "entree_pointeur" (2),
+"redimensionnement" (2). Les types "touche" et "molette" n'ont pas apparu du tout dans cette session car je n'ai pas tapé au clavier ni utilisé la molette
+
+Ce qui m'a surpris, c'est l'asymétrie extrême : les événements "souris" (mouvements) sont continus et arrivent par centaines par seconde dès qu'on bouge la souris, alors que
+les autres types sont ponctuels. C'est exactement ce que le chapitre veut qu'on découvre :
+"Le type le plus fréquent n'est presque jamais celui qu'on attend."
+
+Ce journal réel montre que "souris" est de loin le plus fréquent, ce qui confirme l'importance d'utiliser des événements (et non l'état) pour traiter la souris,
+sinon on serait submergé par des centaines d'événements par seconde.

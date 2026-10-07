@@ -4,6 +4,7 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <map>
 
 std::ofstream g_logFile;
 std::chrono::steady_clock::time_point g_startTime;
@@ -26,6 +27,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_KEYDOWN:
             LogEvent("touche");
             break;
+        case WM_KEYUP:
+            LogEvent("touche");
+            break;
         case WM_MOUSEMOVE:
             LogEvent("souris");
             break;
@@ -46,6 +50,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             break;
         case WM_MOUSEHOVER:
             LogEvent("entree_pointeur");
+            break;
+        case WM_SETCURSOR:
+            break;
+        case WM_NCHITTEST:
             break;
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);

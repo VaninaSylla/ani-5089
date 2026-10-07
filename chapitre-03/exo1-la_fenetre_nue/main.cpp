@@ -1,34 +1,26 @@
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include "NKWindow/NKMain.h"
+#include "NKWindow/Core/NkWindow.h"
+#include "NKWindow/Core/NkWindowConfig.h"
+#include "NKTime/NkClock.h"
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (msg == WM_DESTROY) {
-        PostQuitMessage(0);
-        return 0;
-    }
-    return DefWindowProc(hWnd, msg, wParam, lParam);
-}
+using namespace nkentseu;
 
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int show) {
-    const char* cls = "MaFenetre";
-    WNDCLASSA wc{};
-    wc.lpfnWndProc = WndProc;
-    wc.hInstance = hInst;
-    wc.lpszClassName = cls;
-    RegisterClassA(&wc);
+int nkmain(const NkEntryState& etat) {
+    (void)etat;
 
-    HWND hWnd = CreateWindowExA(0, cls, "Ma fenetre", WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720, nullptr, nullptr, hInst, nullptr);
-    if (!hWnd) {
+    NkWindowConfig config;
+    config.title = "Ma salle";
+    config.width = 1280;
+    config.height = 720;
+
+    NkWindow fenetre(config);
+    if (!fenetre.IsValid()) {
         return 1;
     }
 
-    ShowWindow(hWnd, show);
-
-    MSG msg{};
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+    while (fenetre.IsOpen()) {
+        NkEvents().PollEvents();
+        NkClock::Sleep((int64)10);
     }
     return 0;
-} 
+}

@@ -1,0 +1,24 @@
+Différences observées entre les deux séries (avant.txt vs apres.txt) :
+
+1. Persistance après l'arrêt de la souris (le défaut principal) :
+   Dans avant.txt, quand on arrête de bouger la souris, les valeurs ne reviennent pas à zéro. 
+   Le moteur conserve le dernier delta reçu et l'applique à chaque image, donc la tête continue 
+   de tourner indéfiniment même quand la main est immobile. C'est le bug décrit dans le chapitre : 
+   "la variable qui porte le dernier déplacement brut n'est jamais remise à zéro, et l'intégrer 
+   à chaque image applique indéfiniment le même mouvement, même souris immobile."
+
+2. Perte des mouvements rapides (le second défaut) :
+   Dans avant.txt, quand on bouge la souris vite, plusieurs événements de souris arrivent 
+   entre deux images. Le moteur écrase le delta au lieu de l'accumuler : seul le dernier 
+   événement de l'image est pris en compte, les autres sont perdus. La tête tourne donc moins 
+   que la main ne l'a fait. Dans apres.txt, avec l'accumulateur correct, tous les deltas 
+   de l'image sont sommés, donc les mouvements rapides sont respectés.
+
+L'accumulateur correct (apres.txt) fait deux choses que le moteur ne fait pas :
+- Il AJOUTE les deltas au lieu de les ÉCRASE (accumulation vs écrasement)
+- Il REMET À ZÉRO l'accumulateur à CHAQUE image, même si rien n'a bougé (vidage systématique)
+
+C'est exactement ce que le chapitre décrit : "À chaque événement, on ajoute dans un compteur 
+à soi, jamais on n'écrase : les trois mouvements d'une image comptent tous les trois. Puis 
+une fois par image, on lit le total et on le remet à zéro. Le compteur repart de zéro même 
+si personne n'a bougé, donc la tête s'arrête quand la main s'arrête."

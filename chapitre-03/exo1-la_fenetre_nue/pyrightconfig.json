@@ -1,0 +1,22 @@
+{
+    "include": [
+        "**/*.py",
+        "**/*.jenga"
+    ],
+    "exclude": [
+        "Build/**",
+        "Externals/**",
+        ".vscode/**",
+        "**/__pycache__",
+        "**/node_modules"
+    ],
+    "pythonVersion": "3.8",
+    "reportMissingImports": "warning",
+    "reportUndefinedVariable": "warning",
+    "reportWildcardImportFromLibrary": "none",
+    "extraPaths": [
+        "C:/Users/ngono/AppData/Roaming/Python/Python312/site-packages",
+        ".jenga-typings"
+    ],
+    "_jengaIdeConfigVersion": "0573d4c8407124df"
+}

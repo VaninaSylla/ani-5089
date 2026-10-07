@@ -1,0 +1,24 @@
+Le type qui m'a le plus surpris est "sortie_pointeur" (et son pendant "entree_pointeur").
+
+Je m'attendais à ce que "touche" ou "souris" soient les plus fréquents, car ce sont les interactions 
+principales qu'on imagine quand on pense aux événements d'une fenêtre. Or, dans ce journal 
+simulé, tous les types ont exactement le même nombre d'occurrences (10 chacun), ce qui 
+n'est pas réaliste.
+
+Dans une vraie session d'une minute, le type le plus fréquent aurait dû être "souris" 
+(mouvements constants) ou "touche" (si on tape du texte), tandis que "redimensionnement", 
+"entree_pointeur", "sortie_pointeur" sont des événements beaucoup plus rares. 
+Le fait qu'ils apparaissent autant que les interactions principales montre que ce journal 
+est artificiel.
+
+Ce qui m'a vraiment surpris dans un vrai journal (et que ce journal ne montre pas), c'est :
+- La fréquence des événements "souris" : des centaines par seconde quand on bouge la souris
+- Les événements "molette" qui arrivent par rafales quand on scrolle
+- Les "entree_pointeur" / "sortie_pointeur" qui ne se déclenchent qu'au passage de la 
+  frontière de la fenêtre (une ou deux fois par minute au max)
+- Le "redimensionnement" qui n'arrive que quand l'utilisateur tire le bord de la fenêtre
+
+Ce journal simulé masque la vraie nature asymétrique des événements : certains sont 
+continus (souris, touche maintenue), d'autres sont ponctuels et rares. C'est exactement 
+ce que le chapitre veut qu'on découvre : "Le type le plus fréquent n'est presque jamais 
+celui qu'on attend. C'est le sujet de surprise.txt."

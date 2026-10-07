@@ -1,0 +1,6 @@
+touche : 31
+molette : 31
+souris : 31
+redimensionnement : 30
+entree_pointeur : 30
+sortie_pointeur : 30

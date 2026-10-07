@@ -13,6 +13,6 @@ with workspace("FenetreNueWks", location="."):
         language("C++")
         cppdialect("C++17")
         location(".")
-        files(["src/**.cpp"])
+        files(["main.cpp"])
         links(["user32", "gdi32"])
         usetoolchain("clang-mingw")

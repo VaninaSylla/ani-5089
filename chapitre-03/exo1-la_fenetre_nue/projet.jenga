@@ -1,0 +1,18 @@
+# Fichier de projet Jenga pour la fenêtre nue (Win32 pur)
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+with workspace("FenetreNueWks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    with project("FenetreNue"):
+        windowedapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["src/**.cpp"])
+        links(["user32", "gdi32"])
+        usetoolchain("clang-mingw")

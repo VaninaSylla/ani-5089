@@ -6,7 +6,9 @@ int main() {
     std::cin.tie(nullptr);
 
     int N;
-    if (!(std::cin >> N)) return 0;
+    if (!(std::cin >> N)) {
+        return 0;
+    }
 
     bool saisi = false;
     int sans_garde = 0;

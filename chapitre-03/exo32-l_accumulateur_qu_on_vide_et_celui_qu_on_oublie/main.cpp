@@ -7,7 +7,9 @@ int main() {
     std::cin.tie(nullptr);
 
     int N;
-    if (!(std::cin >> N)) return 0;
+    if (!(std::cin >> N)) {
+        return 0;
+    }
     std::string line;
     std::getline(std::cin, line);
 
@@ -16,7 +18,10 @@ int main() {
 
     for (int i = 0; i < N; ++i) {
         std::getline(std::cin, line);
-        if (line.empty()) { --i; continue; }
+        if (line.empty()) {
+            --i;
+            continue;
+        }
 
         std::istringstream iss(line);
         std::string cmd;

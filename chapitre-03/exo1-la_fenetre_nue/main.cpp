@@ -19,7 +19,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int show) {
 
     HWND hWnd = CreateWindowExA(0, cls, "Ma fenetre", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720, nullptr, nullptr, hInst, nullptr);
-    if (!hWnd) return 1;
+    if (!hWnd) {
+        return 1;
+    }
 
     ShowWindow(hWnd, show);
 
@@ -29,4 +31,4 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int show) {
         DispatchMessage(&msg);
     }
     return 0;
-}
+} 

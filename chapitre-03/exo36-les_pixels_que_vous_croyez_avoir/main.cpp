@@ -5,7 +5,9 @@ int main() {
     std::cin.tie(nullptr);
 
     int N;
-    if (!(std::cin >> N)) return 0;
+    if (!(std::cin >> N)) {
+        return 0;
+    }
 
     int lisible = 0;
 
@@ -19,7 +21,9 @@ int main() {
 
         std::cout << real_width << " " << real_height << " " << px_per_deg << "\n";
 
-        if (px_per_deg >= 15) lisible++;
+        if (px_per_deg >= 15) {
+            lisible++;
+        }
     }
 
     std::cout << "LISIBLE " << lisible << "\n";

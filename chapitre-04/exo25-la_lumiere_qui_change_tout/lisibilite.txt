@@ -1,0 +1,11 @@
+Direction :
+  Valeur essayee : direction (1.0, -0.5, 0.0) - soleil rasant de cote
+  Gain/perte en lisibilite : Les ombres longues reveleent la texture du sol et la hauteur des objets (table, pieds). Les murs perpendiculaires au soleil sont bien eclaires, mais le mur oppose plonge dans l'ombre. On perd en lisibilite globale car une grande partie de la piece est dans l'ombre portee, mais on gagne en perception de relief sur les objets eclairés.
+
+Intensite :
+  Valeur essayee : intensite 0.5 (tres faible)
+  Gain/perte en lisibilite : La scene devient sombre, les details dans les zones d'ombre disparaissent. Les contours des objets sont moins nets, la perception de profondeur diminue. L'oeil a du mal a separer les plans (mur/fond, table/sol). La lisibilite globale chute fortement.
+
+Ombres :
+  Valeur essayee : castShadow = false
+  Gain/perte en lisibilite : Sans ombres, la table et les pieds flottent visuellement - on ne voit plus le contact au sol. Les coins de la piece perdent en definition. L'ancrage des objets au sol n'est plus perceptible, la piece parait plate. Lisibilite des distances et volumes fortement degradee.

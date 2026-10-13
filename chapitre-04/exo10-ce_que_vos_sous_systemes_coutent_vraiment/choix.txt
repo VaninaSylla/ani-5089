@@ -1,0 +1,2 @@
+Je garde : RENDER3D (2883 us/frame)
+Pourquoi : Seul RENDER3D est necessaire pour afficher la salle. Les autres sous-systemes (SHADOW, RAYTRACE, VISIBILITY) coutent du temps CPU/GPU sans apporter de visuel pour cette scene simple. Sur un casque autonome (budget 11ms), il faut minimiser la charge. RENDER3D seul tient largement dans le budget.

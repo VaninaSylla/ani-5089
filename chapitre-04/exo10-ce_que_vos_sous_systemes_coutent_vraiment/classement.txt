@@ -1,0 +1,7 @@
+Classement du plus cher au moins cher (surcout par rapport a RENDER3D seul) :
+RENDER3D+SHADOW : 3247 us/frame (surcout +363 us)
+RENDER3D+SHADOW+RAYTRACE : 3179 us/frame (surcout +296 us)
+RENDER3D : 2883 us/frame
+RENDER3D+RAYTRACE : 2781 us/frame
+RENDER3D+VISIBILITY : 2696 us/frame
+ALL : 2514 us/frame

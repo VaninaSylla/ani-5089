@@ -1,0 +1,28 @@
+# Fichier de projet Jenga pour exo8 - Première salle en cubes (MSVC standalone)
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+with workspace("SalleEnCubesWks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    with project("SalleEnCubes"):
+        windowedapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["salle.cpp", "win32_renderer.h", "win32_renderer.cpp"])
+
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+
+        links([
+            "user32", "gdi32", "kernel32",
+        ])
+
+        usetoolchain("host-clang")

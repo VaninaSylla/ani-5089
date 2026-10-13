@@ -1,0 +1,2 @@
+Facteur : 2.5
+Pourquoi : L'ordre Scale * Translate applique l'echelle AUSSI a la translation. Le centre du mur qui devrait etre a y=1.25 (demi-hauteur 2.5/2) se retrouve a y=1.25*2.5=3.125. L'echelle 'attrape' la translation et la multiplie. C'est pourquoi la salle parait enorme : tous les objets sont echelles par rapport a l'origine au lieu d'etre places puis echelles localement.

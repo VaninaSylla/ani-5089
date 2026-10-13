@@ -1,0 +1,9 @@
+Plateau :
+  y_centre = 0.75 - 0.05/2 = 0.75 - 0.025 = 0.725 m
+  (dessus du plateau a 0.75m, plateau epais 0.05m, donc centre a 0.025m en dessous)
+
+Pieds :
+  hauteur = 0.75 - 0.05 = 0.70 m (du sol au dessous du plateau)
+  y_centre = 0.70 / 2 = 0.35 m
+  positions aux 4 coins : (±0.60, 0.35, ±0.40) relatifs au centre table (0.60, 0.70)
+  soit : (1.20, 0.35, 1.10), (0.00, 0.35, 1.10), (1.20, 0.35, 0.30), (0.00, 0.35, 0.30)

@@ -1,0 +1,15 @@
+Lignes :
+    draw.meshHandle = MeshSystem::GetCube();
+    draw.tint = {1.0f, 1.0f, 1.0f};
+    draw.transform = Mat4f::Translate({0.0f, 0.5f, -0.5f}) * Mat4f::Scale({1.0f, 1.0f, 1.0f});
+    draw.aabb.min = {-0.5f, 0.0f, -1.0f};
+    draw.aabb.max = { 0.5f, 1.0f,  0.0f};
+    renderer.Submit(draw);
+
+Cause : Aucune (le cube s'affiche correctement du premier coup).
+Si l'écran restait vide, les causes possibles seraient :
+  1. Aucune lumière déclarée
+  2. Caméra à l'intérieur du cube ou tournée ailleurs
+  3. Échelle nulle
+  4. NK_SS_RENDER3D éteint
+  5. Boîte englobante (aabb) non renseignée ou incorrecte

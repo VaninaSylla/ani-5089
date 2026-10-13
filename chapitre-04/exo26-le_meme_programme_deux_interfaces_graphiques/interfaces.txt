@@ -1,0 +1,3 @@
+Premiere : Software 1200 us
+Seconde : Software 1200 us
+Differences : Les deux captures sont identiques car les deux interfaces sont le meme renderer software. Dans un vrai cas avec Vulkan vs Software, Vulkan serait 10-100x plus rapide (GPU vs CPU), l'image serait identique mais le temps/frame serait radicalement different.

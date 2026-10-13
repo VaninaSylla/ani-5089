@@ -1,0 +1,3 @@
+Un par un : 220 226 40
+Groupes : 7 519 2000
+Trouve : DrawIndexedInstanced (ou equivalent) - permet de dessiner plusieurs instances d'un meme maillage en un seul appel. Dans les headers NKRenderer, chercher NkMeshSystem::SubmitInstanced ou NkRenderer::SubmitInstanced.

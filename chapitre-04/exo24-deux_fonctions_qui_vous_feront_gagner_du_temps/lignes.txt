@@ -1,0 +1,3 @@
+Avant : 120
+Apres : 85
+Comptage : Lignes du code de construction de la salle (murs, sol, plafond, porte, fenetres, table, objet). On a compte les lignes de soumission (transform + aabb + submit) et d'initialisation. On a laisse de cote les lignes de configuration scene/camera/lumiere et la boucle de rendu.

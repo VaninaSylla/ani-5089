@@ -1,0 +1,20 @@
+# Fichier de projet Jenga pour exo24 - Deux fonctions
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+with workspace("DeuxFonctionsWks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    with project("DeuxFonctions"):
+        windowedapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["poser.cpp", "win32_renderer.h", "win32_renderer.cpp"])
+
+        defines(["_CRT_SECURE_NO_WARNINGS", "WIN32_LEAN_AND_MEAN", "NOMINMAX"])
+        links(["user32", "gdi32", "kernel32"])
+        usetoolchain("host-clang")

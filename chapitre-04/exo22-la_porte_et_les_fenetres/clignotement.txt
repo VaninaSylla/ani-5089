@@ -1,0 +1,5 @@
+Constat : Quand la porte et les fenetres sont placees exactement dans le plan de la face interieure des murs, on voit un clignotement (z-fighting) : les pixels du mur et de l'ouverture se disputent la meme profondeur, creant un scintillement aleatoire.
+
+Nom : Z-fighting (conflit de profondeur). Cela se produit quand deux surfaces coplanaires (meme plan) sont rendues : le buffer de profondeur ne peut pas trancher definitivement laquelle est devant, le resultat alterne entre les deux a chaque frame.
+
+Reglage : 0.01 metres (1 cm). On avance les panneaux de 1 cm vers l'interieur de la piece. Ni moins (0.005m laisserait encore du z-fighting sur certaines cartes), ni plus (inutile de les enfoncer davantage dans le mur, 1cm suffit pour separer les plans dans le buffer de profondeur).

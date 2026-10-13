@@ -1,0 +1,20 @@
+# Fichier de projet Jenga pour exo22 - La porte et les fenêtres
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+with workspace("PorteFenetresWks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    with project("PorteFenetres"):
+        windowedapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["ouvertures.cpp", "win32_renderer.h", "win32_renderer.cpp"])
+
+        defines(["_CRT_SECURE_NO_WARNINGS", "WIN32_LEAN_AND_MEAN", "NOMINMAX"])
+        links(["user32", "gdi32", "kernel32"])
+        usetoolchain("host-clang")

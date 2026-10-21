@@ -1,0 +1,38 @@
+# Fichier de projet Jenga pour exo6-le_chemin_qui_marche_partout
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+KIT_ROOT = r"C:\Users\ngono\Desktop\ani-5089\Kits\R3D"
+
+with workspace("Exo6Wks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    useconfig(KIT_ROOT + "/R3D.jenga")
+
+    # Le projet s'appelle MaSalle : l'enonce lance l'executable depuis
+    # Build/Bin/Debug-Windows/MaSalle/, et c'est exactement ce chemin-la.
+    with project("MaSalle"):
+        windowedapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["chemin.cpp"])
+
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+
+        user3d()
+
+        # Le kit a ete compile avec un autre llvm-mingw (NKCode 1.0.7) que le
+        # notre : libc++ est embarque a la fois dans NKGLSlang.lib et dans le
+        # libc++.a du compilateur. Les symboles sont identiques et benins ;
+        # on autorise les definitions multiples pour laisser passer le lien.
+        ldflags(["-Wl,--allow-multiple-definition"])
+
+        usetoolchain("clang-mingw")

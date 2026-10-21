@@ -1,0 +1,11 @@
+dorsal : WASAPI
+frequence : 48000
+tampon : 256
+latence : 22.000000
+
+Duree d'un tampon de 256 trames a 48000 Hz, calculee a la main :
+256 / 48000 = 0,005333 s = 5,333 ms
+
+Rappel : le moteur a negotiate 48000 Hz et 2 canaux ; son tampon effectif
+annonce dans le journal est de 1056 frames par callback, mais le tampon que
+le moteur annonce (GetBufferSize) est de 256 trames.

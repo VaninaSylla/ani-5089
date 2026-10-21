@@ -7,3 +7,6 @@ Build/
 NkentseuKit/
 **/NkentseuKit/
 **/include/NKentseuKit/
+Kits/
+.nkcode/
+/logs/

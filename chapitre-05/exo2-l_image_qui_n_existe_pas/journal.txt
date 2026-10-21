@@ -1,0 +1,171 @@
+JOURNAL DE BORD - chapitre-05 / exo2 : l'image qui n'existe pas
+
+Regle suivie : chaque entree recopie la commande lancee, puis les lignes
+utiles du terminal. Les hundreds de lignes de trace du moteur
+("[2026-...] [INF] ...") ne sont pas recopiees une par une : elles sont
+toutes dans logs/app.log, cite plus bas. Les deux lignes que l'exercice
+demande sont en tete de ce journal.
+
+==============================================================================
+LES DEUX LIGNES DEMANDEES
+==============================================================================
+
+1) La ligne du programme (sortie standard) :
+
+    charge : false, valide : false, largeur : 0, hauteur : 0
+
+2) La ligne du journal du moteur qui nomme le fichier.
+   Source : logs/app.log, sous le dossier d'ou le programme a ete lance
+   (le moteur ecrit son journal dans "logs/app.log", chemin relatif au
+   dossier de lancement) :
+
+    [2026-10-21 23:11:20.111] [ERR] [default] [NkTextureLibrary.cpp:478 in Load] -> [NkTextureLibrary] Echec chargement texture : murs/nexistepas.png
+
+Le meme echec, vu par le moteur de materiaux, une ligne plus bas :
+
+    [2026-10-21 23:11:20.132] [INF] [default] [NkMaterialSystem.cpp:633 in UpdateInstanceDescriptors] -> [NkMaterialSystem] canal albedo lie : id=10 (blanc 1x1 = id=10) -> REPLI BLANC : rien n'a ete pose sur ? albedo ?
+
+==============================================================================
+Entree 1 - Preparation des ressources du moteur
+==============================================================================
+Commandes :
+
+    Remove-Item "Build\Bin\Debug-Windows\Exo2Inexistant\Resources" -Recurse -Force -ErrorAction SilentlyContinue
+    Copy-Item "C:\Users\ngono\Desktop\ani-5089\Kits\R3D\Resources" "Build\Bin\Debug-Windows\Exo2Inexistant\Resources" -Recurse -Force
+    (Get-ChildItem "Build\Bin\Debug-Windows\Exo2Inexistant\Resources" -Recurse -File).Count
+
+Sortie du terminal :
+
+    482
+
+==============================================================================
+Entree 2 - Compilation
+==============================================================================
+Commande :
+
+    jenga build
+
+Sortie du terminal (lignes utiles) :
+
+    Loading workspace...
+    Configuration: Debug
+    Target:        Windows x86_64
+    Toolchain:     clang-mingw
+    Build Order (1 projects):
+      1. Exo2Inexistant [WINDOWED_APP]
+    [1/1] Compiled: inexistant.cpp
+    Linking...
+    Built: Build\Bin\Debug-Windows\Exo2Inexistant\Exo2Inexistant.exe
+    Build Successful   Time: 2.76s
+    Warnings: 3
+    Projects Built:  1/1
+    Status:         SUCCESS
+
+Les 3 avertissements sont ceux de l'edition de liens ("duplicate symbol" entre
+libc++.a et NKGLSlang.lib) : ils ne concernent pas le code de l'exercice, et
+projet.jenga les autorise explicitement avec -Wl,--allow-multiple-definition.
+
+==============================================================================
+Entree 3 - Execution
+==============================================================================
+Commandes, lancees depuis le dossier du projet :
+
+    $env:MASALLE_SHOT = "120"
+    $env:MASALLE_SHOT_PATH = "mur-absent.png"
+    .\Build\Bin\Debug-Windows\Exo2Inexistant\Exo2Inexistant.exe
+
+Sortie standard du programme :
+
+    Journal de l'exercice : l'image qui n'existe pas
+    Fichier demande : murs/nexistepas.png
+
+    charge : false, valide : false, largeur : 0, hauteur : 0
+    [disque] fopen("murs/nexistepas.png") = ECHEC (fichier absent)
+
+    [textures] Load("murs/nexistepas.png") = handle id=4 (non nul)
+    [textures] id des textures par defaut du moteur :
+    [textures]   White1x1  id=1
+    [textures]   Black1x1  id=2
+    [textures]   Normal1x1 id=3
+    [textures]   Error     id=4  (texture magenta "manquante")
+    [textures] le handle rendu pointe-t-il la texture d'erreur ? OUI
+    [textures] le handle rendu pointe-t-il le blanc 1x1 ? non
+
+    Consequence : un fichier absent ne renvoie pas un pointeur nul et ne plante
+    pas. La bibliotheque rend un handle NON NUL qui pointe la texture d'erreur
+    (magenta 1x1) : le mur est bien dessine, mais en magenta uni. C'est le
+    panneau "image manquante" du moteur.
+
+    [capture] frame 120 -> mur-absent.png
+    [exo2] capture armee : frame 120 -> mur-absent.png
+    [toneldr] copie de ToneLDR 1280x720 ARMEE dans FXAA_Final
+    [toneldr] transient ToneLDR 1280x720, lignes telles que stockees -> mur-absent.png : ecrit
+    [exo2] fin du programme
+
+Sortie d'erreur du moteur (la ligne qui nomme le fichier) :
+
+    [2026-10-21 23:11:20.111] [ERR] [default] [NkTextureLibrary.cpp:478 in Load] -> [NkTextureLibrary] Echec chargement texture : murs/nexistepas.png
+
+Le programme a rendu la main avec le code 0 : aucun plantage.
+
+==============================================================================
+Entree 4 - Fichiers produits par le lancement
+==============================================================================
+Commande :
+
+    Get-ChildItem "inexistant.cpp","journal.txt","reponse.txt","mur-absent.png","logs\app.log" | Format-Table Name,Length,LastWriteTime -AutoSize
+
+Sortie du terminal :
+
+    Name           Length LastWriteTime
+    ----           ------ -------------
+    inexistant.cpp  10731 21/10/2026 23:12:45
+    journal.txt     54534 21/10/2026 18:48:39
+    reponse.txt      1927 21/10/2026 18:25:50
+    mur-absent.png 141037 21/10/2026 23:11:21
+    app.log         39721 21/10/2026 23:11:21
+
+(les tailles de journal.txt et reponse.txt sont celles d'avant la
+reecriture de ce journal et de la reponse ; mur-absent.png et
+logs/app.log sont bien les fichiers de ce lancement)
+
+==============================================================================
+Entree 5 - Relecture de la capture
+==============================================================================
+Commande :
+
+    $code = @'
+    from PIL import Image
+    import numpy as np
+    a = np.asarray(Image.open('mur-absent.png').convert('RGB')).astype(np.float32)
+    h, w, _ = a.shape
+    print('taille =', w, 'x', h)
+    print('moyenne globale =', a.mean(axis=(0,1)).round(1), ' ecart-type =', a.std(axis=(0,1)).round(1))
+    def r(n,y0,y1,x0,x1):
+        q=a[y0:y1,x0:x1]
+        print(f'{n:18s} moyenne={q.mean(axis=(0,1)).round(0)} ecart-type={q.std(axis=(0,1)).round(1)}')
+    r('plafond',20,70,300,980)
+    r('mur du fond',130,500,400,880)
+    r('mur gauche',220,500,0,110)
+    r('mur droit',220,500,1170,1280)
+    r('sol',620,710,200,1080)
+    m=a.reshape(-1,3)
+    mag=((m[:,0]>m[:,1]+15)&(m[:,2]>m[:,1]+15)).mean()
+    print('fraction de pixels magenta =', round(float(mag),3))
+    '@
+    $code | python -
+
+Sortie du terminal :
+
+    taille = 1280 x 720
+    moyenne globale = [65.8 31.4 67.5]  ecart-type = [19.8 33.5 22.1]
+    plafond            moyenne=[62. 11. 62.] ecart-type=[0.  0.6 0. ]
+    mur du fond        moyenne=[71. 23. 74.] ecart-type=[17.6 30.  20.5]
+    mur gauche         moyenne=[54.  7. 54.] ecart-type=[5.1 0.4 5.1]
+    mur droit          moyenne=[54.  7. 54.] ecart-type=[4.9 0.4 4.9]
+    sol                moyenne=[63. 63. 63.] ecart-type=[17.7 17.5 17.3]
+    fraction de pixels magenta = 0.664
+
+Les murs et le plafond sont magenta (la texture d'erreur du moteur), le sol
+est gris : il n'a pas de texture, il prend la couleur d'albedo de son
+materiau.

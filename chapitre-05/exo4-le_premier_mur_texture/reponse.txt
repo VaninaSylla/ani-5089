@@ -1,8 +1,48 @@
 Ma texture :
-C'est murs/beton.png, une image de 1024 x 1024 pixels en sRGB, de format PNG. Je n'avais pas de photo d'un vrai mur, j'ai donc fait fabriquer une image de mur en brique par un script, avec des briques de 20 cm de haut, un jointoiement clair et du grain : c'est une image de mur synthetique, pas une photo. Elle est chargee UNE FOIS, avant la boucle, par renderer->GetTextures()->Load("murs/beton.png"). Le materiau est cree au meme endroit par NkMaterial::Create(renderer->GetMaterials(), NkMaterialType::NK_PBR_METALLIC), la texture lui est donnee par SetAlbedoMap, et le pave le recoit par dc.material = mat->GetInstHandle(). J'ai ajoute SetTriplanarTileSize(1.0f) : la texture se repete donc tous les metres au lieu d'etre etiree sur les 8 metres du mur. Sur la capture, on compte 8 colonnes et 4 rangees de briques, ce qui est bien 1 metre par carreau.
+C'est murs/beton.png, une image de 1024 x 1024 pixels en sRGB, de format
+PNG. C'est une photo que j'ai prise d'un mur en beton (avec mon telephone),
+pas une image fabriquee. Je l'ai recadree en carre et ramenee a 1024 x 1024
+pixels, puis j'ai aplati son eclairage : la photo avait un degrade de
+lumiere, et repetee tous les metres elle dessinait un quadrillage sur le
+mur. Aplatir, c'est diviser l'image par sa version tres floue : le relief du
+beton reste, le degrade disparait. J'ai garde la texture de brique a cote
+(murs/brique.png), pour comparer les deux. Elle est chargee UNE FOIS, avant
+la boucle, par renderer->GetTextures()->Load("murs/beton.png"). Le materiau
+est cree au meme endroit par NkMaterial::Create(renderer->GetMaterials(),
+NkMaterialType::NK_PBR_METALLIC), la texture lui est donnee par
+SetAlbedoMap, et le pave le recoit par dc.material = mat->GetInstHandle().
+J'ai ajoute SetTriplanarTileSize(1.0f) : la texture se repete donc tous les
+metres au lieu d'etre etiree sur les 8 metres du mur. Sur la capture, le mur
+de beton se repete 8 fois en largeur et 4 fois en hauteur, soit 1 metre par
+carreau, comme le veut SetTriplanarTileSize(1.0f) ; le quadrillage a
+disparu, on ne voit plus les jointures des carreaux, seulement le grain du
+beton.
 
 Ce que le mur a gagne :
-Un mur d'une couleur unie ne donne aucune distance a l'oeil : on sait qu'il y a un mur, on ne sait pas s'il est a 2 metres ou a 20. La texture donne l'echelle, parce que la taille d'une brique est connue : sur apres.png, le mur du fond fait 8 briques de large, on lit donc qu'il fait 8 metres, et on le compare aux 3,8 metres de haut. Sur avant.png, le meme mur est un rectangle gris uniforme : rien ne dit s'il est grand ou petit, et l'oeil n'a aucun repere pour le situer dans la piece. La texture n'ajoute pas de la couleur pour la couleur, elle ajoute de l'information : c'est la difference entre une surface et un decor.
+Un mur d'une couleur unie ne donne aucune distance a l'oeil : on sait qu'il
+y a un mur, on ne sait pas s'il est a 2 metres ou a 20. La texture donne
+l'echelle, parce que la taille d'une brique est connue : sur apres.png, le
+mur du fond fait 8 briques de large, on lit donc qu'il fait 8 metres, et on
+le compare aux 3,8 metres de haut. Sur avant.png, le meme mur est un
+rectangle gris uniforme : rien ne dit s'il est grand ou petit, et l'oeil n'a
+aucun repere pour le situer dans la piece. La texture n'ajoute pas de la
+couleur pour la couleur, elle ajoute de l'information : c'est la difference
+entre une surface et un decor.
 
 Ce qui m'a bloque :
-Trois choses, dans l'ordre. D'abord le chemin : j'ai ecrit "murs/beton.png", un chemin relatif, qui part du dossier d'ou le programme est lance. Lance depuis le dossier du projet, le mur se texture ; lance depuis un autre dossier, le fichier n'est plus la, et le journal du moteur le dit noir sur blanc (NkTextureLibrary.cpp:512 in Load -> Texture chargee : murs/beton.png (1024x1024 sRGB)). C'est exactement le piege de l'exercice suivant, et je l'ai vu avant de le chercher. Ensuite, la sonde de capture du moteur ne tire qu'une fois par programme : pour avoir avant.png ET apres.png du meme point de vue, il faut lancer la salle deux fois, une fois avec le mur uni (MUR_SANS_TEXTURE=1) et une fois avec le mur texture, la capture se faisant a la meme frame (120) dans les deux cas. Enfin, mes premieres captures etaient inexploitables : la piece etait trop sombre, et le SSAO du moteur striait les surfaces vues de biais, ce qui masquait le mur. J'ai coupe le SSAO au profit du HBAO, ajoute une lampe au plafond et rapproche les murs du plafond pour supprimer une fuite de lumiere. Ces trois reglages ne sont pas le sujet de l'exercice, mais sans eux les deux captures ne montraient rien.
+Trois choses, dans l'ordre. D'abord le chemin : j'ai ecrit "murs/beton.png",
+un chemin relatif, qui part du dossier d'ou le programme est lance. Lance
+depuis le dossier du projet, le mur se texture ; lance depuis un autre
+dossier, le fichier n'est plus la, et le journal du moteur le dit noir sur
+blanc (NkTextureLibrary.cpp:512 in Load -> Texture chargee : murs/beton.png
+(1024x1024 sRGB)). C'est exactement le piege de l'exercice suivant, et je
+l'ai vu avant de le chercher. Ensuite, la sonde de capture du moteur ne tire
+qu'une fois par programme : pour avoir avant.png ET apres.png du meme point
+de vue, il faut lancer la salle deux fois, une fois avec le mur uni
+(MUR_SANS_TEXTURE=1) et une fois avec le mur texture, la capture se faisant
+a la meme frame (120) dans les deux cas. Enfin, mes premieres captures
+etaient inexploitables : la piece etait trop sombre, et le SSAO du moteur
+striait les surfaces vues de biais, ce qui masquait le mur. J'ai coupe le
+SSAO au profit du HBAO, ajoute une lampe au plafond et rapproche les murs du
+plafond pour supprimer une fuite de lumiere. Ces trois reglages ne sont pas
+le sujet de l'exercice, mais sans eux les deux captures ne montraient rien.

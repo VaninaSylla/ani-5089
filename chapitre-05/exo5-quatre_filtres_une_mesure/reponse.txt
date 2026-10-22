@@ -1,0 +1,67 @@
+Ce que la comparaison montre :
+La comparaison est faite par le programme, pixel par pixel, sur les 256 x
+256 = 65 536 pixels de chaque resultat, contre le resultat bilineaire : deux
+boucles GetPixel, et un compteur qui s'incremente des qu'un canal differe.
+La source est une photo de mur en beton de 3072 x 3072, reduite d'abord en
+2048 x 2048 par Resize, comme le demande l'enonce. Le plus proche voisin se
+detache immediatement : 49 497 pixels different sur au moins un canal, soit
+75,5 % de l'image, et l'ecart monte a 15 sur 255 sur certains pixels.
+L'ecart en amplitude est faible parce que le beton est lisse, mais il touche
+les trois quarts des pixels : c'est bien le resultat pixelise que l'on
+attend, il ne garde qu'un pixel source par pixel de sortie. Le bicubique et
+le Lanczos-3, eux, different du bilineaire sur ZERO pixel. Ce n'est pas une
+coincidence de moyenne : les trois fichiers sont strictement identiques, ils
+ont la meme empreinte MD5 (c5eb17b9b6278bf56033b2a71cc6ed77). Autrement dit,
+Resize du moteur n'implemente que deux algorithmes reellement : le plus
+proche voisin et le bilineaire. Quand on lui demande du bicubique ou du
+Lanczos-3, il rend le bilineaire sans le dire. L'en-tete annonce quatre
+filtres, le code n'en ecrit que deux, et c'est exactement ce que le chapitre
+prevoyait : l'en-tete dit ce qu'on a voulu ecrire, le code dit ce qui a ete
+ecrit. Le seul filtre dont le nom est verifie par la mesure est donc
+NK_NEAREST.
+
+L'ecart de temps que j'accepte :
+Les moyennes des vingt reductions du lancement livre sont 373 us pour le
+plus proche voisin, 1497 us pour le bilineaire, 1689 us pour le bicubique et
+1689 us pour le Lanczos-3. Mais l'ecart que je regarde n'est pas celui-la :
+c'est l'ecart entre deux executions du meme filtre. Sur les vingt mesures de
+ce lancement, le plus proche voisin varie de 320 a 532 us, le bilineaire de
+1195 a 1941 us, le bicubique de 1586 a 2584 us et le Lanczos-3 de 1533 a
+2488 us. Une meme operation, repetee, varie donc de 200 a 1000 us dans un
+meme lancement : tout ecart inferieur a 1000 us n'est pas une difference de
+filtre, c'est du bruit de mesure. Concretement, les 13 % entre le bicubique
+(1689 us) et le bilineaire (1497 us) ne veulent rien dire, puisque les deux
+images sont les memes : c'est du bruit, et un deuxieme lancement ne
+donnerait meme pas les memes chiffres. Le seul ecart qui depasse le bruit
+est celui du plus proche voisin, 4,0 fois plus rapide, et la raison est
+simple : il ne lit qu'un pixel source par pixel de sortie, la ou le
+bilineaire en lit quatre. J'ai aussi regarde la premiere reduction, parce
+que l'enonce le dit : elle paie des choses que les suivantes ne paient pas.
+C'est net sur le plus proche voisin, dont la premiere reduction est la plus
+lente des vingt (532 us, pour une moyenne de 373 us, soit 42 % de la moyenne
+a elle seule) : elle touche pour la premiere fois les 12 Mo de la source et
+alloue le tampon de destination. Sur les trois autres filtres la premiere
+passe n'est pas systematiquement la plus lente, et son poids y est minime.
+Au chargement d'une texture, j'accepte 1000 microsecondes d'ecart sans m'en
+soucier : la reduction est faite une seule fois dans la vie du programme.
+Dans la boucle de rendu, j'accepte 0 microseconde, parce qu'une reduction
+dans la boucle n'a pas de sens.
+
+Dans quel contexte :
+Le contexte, c'est une texture de mur qu'on prepare une fois pour toutes, au
+chargement, avant la boucle de rendu. Une reduction de 2048 x 2048 vers 256
+x 256 coute 1,5 ms avec le filtre bilineaire, d'apres la mesure : sur une
+image de 4096 de cote, la version en 1024 pese seize fois moins en memoire,
+et c'est la que le vrai choix se joue, pas dans le temps de reduction. Le
+temps d'une reduction de 1,5 ms, paye une fois, n'a aucun poids devant le
+chargement de la texture elle-meme. Donc le filtre ne se choisit pas sur sa
+vitesse : entre le plus proche voisin et le bilineaire, la difference de 1,1
+ms est irrelevante au chargement, et le plus proche voisin perd sur la
+qualite. Entre le bilineaire, le bicubique et le Lanczos-3, il n'y a de
+toute facon rien a choisir dans ce moteur, puisque les trois donnent la meme
+image : si j'ai besoin de la qualite d'un vrai bicubique ou d'un vrai
+Lanczos, il faut reduire l'image hors du moteur, avant de la lui donner, et
+non compter sur Resize. C'est le meilleur exemple de la regle du chapitre :
+une reduction d'image se fait au chargement, une fois, et la seule question
+qui compte a ce moment-la est celle de la memoire, pas celle de la
+milliseconde.

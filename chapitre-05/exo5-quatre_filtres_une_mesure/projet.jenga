@@ -1,0 +1,33 @@
+# Fichier de projet Jenga pour exo5-quatre_filtres_une_mesure
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+KIT_ROOT = r"C:\Users\ngono\Desktop\ani-5089\Kits\R3D"
+
+with workspace("Exo5Wks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    useconfig(KIT_ROOT + "/R3D.jenga")
+
+    with project("Exo5Filtres"):
+        consoleapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["filtres.cpp"])
+
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+
+        # Ce programme ne fait que du traitement d'image et du chronometrage :
+        # il lui faut NKImage (decoder, redimensionner, ecrire) et NKTime
+        # (chronometrer). Pas de fenetre, pas de renderer.
+        user3d(modules=["NKImage", "NKTime"])
+
+        usetoolchain("clang-mingw")

@@ -1,8 +1,51 @@
 Ce que rend Load :
-Il y a deux Load dans cet exercice, et ils ne repondent pas pareil. Celui de NKImage, d'abord : Load("murs/nexistepas.png") rend false, IsValid() rend false, et Width() comme Height() rendent 0. La ligne du programme est donc exactement "charge : false, valide : false, largeur : 0, hauteur : 0" : l'objet image reste une image, mais vide, sans un seul pixel. NKImage est un type valeur, pas un pointeur : l'objet existe apres l'echec, il n'est simplement pas valide. Celui de la bibliotheque de textures du moteur, ensuite : Load rend un handle NON NUL, d'id 4. La comparaison avec les textures par defaut du moteur le prouve : White1x1 = 1, Black1x1 = 2, Normal1x1 = 3, Error = 4. Le handle rendu est donc la texture d'erreur du moteur, la magenta 1x1, et pas le blanc 1x1. Autrement dit, ce Load ne dit pas "l'image est chargee" : il dit "voici une texture a utiliser", et cette texture est le panneau "image manquante".
+Il y a deux Load dans cet exercice, et ils ne repondent pas pareil. Celui de
+NKImage, d'abord : Load("murs/nexistepas.png") rend false, IsValid() rend
+false, et Width() comme Height() rendent 0. La ligne du programme est donc
+exactement "charge : false, valide : false, largeur : 0, hauteur : 0" :
+l'objet image reste une image, mais vide, sans un seul pixel. NKImage est un
+type valeur, pas un pointeur : l'objet existe apres l'echec, il n'est
+simplement pas valide. Celui de la bibliotheque de textures du moteur,
+ensuite : Load rend un handle NON NUL, d'id 4. La comparaison avec les
+textures par defaut du moteur le prouve : White1x1 = 1, Black1x1 = 2,
+Normal1x1 = 3, Error = 4. Le handle rendu est donc la texture d'erreur du
+moteur, la magenta 1x1, et pas le blanc 1x1. Autrement dit, ce Load ne dit
+pas "l'image est chargee" : il dit "voici une texture a utiliser", et cette
+texture est le panneau "image manquante".
 
 Pourquoi rien ne plante :
-Du cote de NKImage, il n'y a rien a planter : Load renvoie un booleen et remplit l'image sur place, le destructeur libere un buffer pixel qui n'existe pas, et Width() et Height() rendent 0 sans jamais lire un pixel. L'image absente est un etat normal de l'objet, pas une erreur : il n'y a aucun pointeur nul a dereferencer, donc aucune segfault possible. Du cote du moteur, c'est une decision de conception : NkTextureLibrary intercepte l'echec de lecture, ecrit dans son journal "Echec chargement texture : murs/nexistepas.png", et rend a la place sa texture d'erreur. SetAlbedoMap accepte le handle, le shader recoit une texture valide, la passe Geometry dessine normalement. Le programme ne peut donc pas voir le probleme en regardant le handle : il rend la main avec le code 0, apres 756 soumissions sur 126 frames, sans une seule erreur. C'est precisement ce qui rend la panne invisible : un chemin faux ne se voit pas, il se continue.
+Du cote de NKImage, il n'y a rien a planter : Load renvoie un booleen et
+remplit l'image sur place, le destructeur libere un buffer pixel qui
+n'existe pas, et Width() et Height() rendent 0 sans jamais lire un pixel.
+L'image absente est un etat normal de l'objet, pas une erreur : il n'y a
+aucun pointeur nul a dereferencer, donc aucune segfault possible. Du cote du
+moteur, c'est une decision de conception : NkTextureLibrary intercepte
+l'echec de
+lecture, ecrit dans son journal "Echec chargement texture :
+murs/nexistepas.png", et rend a la place sa texture d'erreur. SetAlbedoMap
+accepte le handle, le shader recoit une texture valide, la passe Geometry
+dessine normalement. Le programme ne peut donc pas voir le probleme en
+regardant le handle : il rend la main avec le code 0, apres 756 soumissions
+sur 126 frames, sans une seule erreur. C'est precisement ce qui rend la
+panne invisible : un chemin faux ne se voit pas, il se continue.
 
 Ce que montre le mur :
-La capture mur-absent.png, prise a la frame 120, montre une piece entiere magenta : le plafond et les deux murs lateraux sont d'un magenta quasi uniforme (moyenne 62, 11, 62 pour le plafond, 54, 7, 54 pour les murs du cote), le mur du fond est magenta lui aussi mais module par la lumiere (71, 23, 74), et 66,4 % des pixels de l'image sont magenta. Le mur n'est donc ni blanc, ni vide, ni transparent : il est magenta, c'est la texture d'erreur du moteur affichee a la place de l'image absente. Le sol, lui, reste gris neutre (63, 63, 63), parce qu'il n'a pas de texture : il prend la couleur d'albedo de son materiau. Attention a ne pas se tromper de ligne dans le journal : la ligne "REPLI BLANC" (canal albedo lie : id=10, blanc 1x1) concerne ce materiau-la, celui du sol, et elle ne decrit pas la couleur finale du mur. Ce qu'il faut retenir : un handle non nul ne prouve pas que l'image a ete chargee, puisque le moteur rend un handle valide meme quand il n'a rien charge. Le seul temoin fiable de l'echec est le journal du moteur ("Echec chargement texture : ...") ; avec NKImage, c'est le booleen de Load et IsValid() qui disent la verite. Il faut donc tester le resultat du chargement et lire les logs, sinon on affiche un mur magenta sans savoir d'ou il vient.
+La capture mur-absent.png, prise a la frame 120, montre une piece entiere
+magenta : le plafond et les deux murs lateraux sont d'un magenta quasi
+uniforme (moyenne 62, 11, 62 pour le plafond, 54, 7, 54 pour les murs du
+cote), le mur du fond est magenta lui aussi mais module par la lumiere (71,
+23, 74), et 66,4 % des pixels de l'image sont magenta. Le mur n'est donc ni
+blanc, ni vide, ni transparent : il est magenta, c'est la texture d'erreur
+du moteur affichee a la place de l'image absente. Le sol, lui, reste gris
+neutre (63, 63, 63), parce qu'il n'a pas de texture : il prend la couleur
+d'albedo de son materiau. Attention a ne pas se tromper de ligne dans le
+journal : la
+ligne "REPLI BLANC" (canal albedo lie : id=10, blanc 1x1) concerne ce
+materiau-la, celui du sol, et elle ne decrit pas la couleur finale du mur.
+Ce qu'il faut retenir : un handle non nul ne prouve pas que l'image a ete
+chargee, puisque le moteur rend un handle valide meme quand il n'a rien
+charge. Le seul temoin fiable de l'echec est le journal du moteur ("Echec
+chargement texture : ...") ; avec NKImage, c'est le booleen de Load et
+IsValid() qui disent la verite. Il faut donc tester le resultat du
+chargement et lire les logs, sinon on affiche un mur magenta sans savoir
+d'ou il vient.

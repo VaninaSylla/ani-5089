@@ -1,0 +1,56 @@
+La loi physique :
+Le modele qui suit la loi d'une source ponctuelle est INVERSE, et les
+mesures le disent exactement : avec rolloffFactor = 1, on mesure 1,000 a 0,5
+m et a 1 m, puis 0,500 a 2 m, 0,250 a 4 m et 0,125 a 8 m. C'est 1/d, la
+distance minimale etant de 1 m. C'est bien la loi physique d'une source
+ponctuelle, et il faut preciser pourquoi : l'intensite rayonnee par une
+source ponctuelle decroit comme 1/d^2, mais ce que je mesure est une
+amplitude (la racine de la moyenne des carres), et l'amplitude, elle,
+decroit comme 1/d. J'ai donc bien la loi physique, mesuree sur l'amplitude,
+avec la loi d'intensite en 1/d^2 derriere. Ce que je note aussi, c'est que
+EXPONENTIAL avec rolloffFactor = 1 donne exactement les memes nombres (1,000
+/ 1,000 / 0,500 / 0,250 / 0,125) : a l'exposant 1, une loi de puissance est
+la loi inverse. Les deux courbes se recouvrent sur la figure, et c'est le
+role de l'exposant de les separer, comme je le vois aussitot au reglage
+rolloffFactor = 2, ou EXPONENTIAL tombe a 0,250 / 0,063 / 0,016 : la loi
+d'intensite (1/d^2) appliquee a l'amplitude, donc une chute deux fois trop
+forte pour un son qui doit rester plausible.
+
+Ce que change rolloff :
+Modele par modele, a 8 metres, ou la difference se voit. NONE ne change rien :
+1,000 a toutes les distances et pour les deux reglages, la distance
+n'intervient pas du tout. INVERSE change franchement : 0,125 avec
+rolloffFactor = 1, et 0,067 avec rolloffFactor = 2, parce que la loi est
+alors 1/(1 + rolloff x (distance - distance minimale)) : a 2 metres on passe
+de 0,500 a 0,334, a 4 metres de 0,250 a 0,143, a 8 metres de 0,125 a 0,067.
+La chute est plus rapide, mais elle reste de la meme famille, et c'est le
+modele que je choisirais. LINEAR change peu, et c'est la surprise de la
+mesure : 0,929 avec rolloffFactor = 1 et 0,859 avec rolloffFactor = 2, a 8
+metres. Le modele lineaire est une rampe entre la distance minimale et la
+distance maximale, et j'ai regle la distance maximale a 100 m : sur 8
+metres, on ne parcourt que 7 % de la rampe, donc presque rien. Doubler le
+facteur de chute ne change qu'un peu la pente, et le modele reste le moins
+attenuant des trois. EXPONENTIAL est celui ou le reglage bite le plus : le
+facteur de chute y est l'exposant de la loi de puissance, donc 0,125 a 8
+metres avec rolloffFactor = 1, et 0,016 avec rolloffFactor = 2, soit huit
+fois moins. Un ecart de 18 decibels pour un simple reglage, c'est un modele
+ou le reglage est une decision, pas un ajustement.
+
+Pour la porte du couloir :
+Je prends le modele INVERSE, avec rolloffFactor = 1, et je le justifie avec
+une distance et un gain. Disons que la porte qui grince est a 12 metres de
+l'auditeur. Sur la loi mesuree, son gain est de 1/12, soit 0,083,
+c'est-a-dire -21,6 dB : c'est la loi physique, et elle a l'air severe, mais
+elle est juste, et c'est au son lui-meme qu'il faut demander d'etre fort,
+pas au modele. Je refuse LINEAR sur cette porte : a 12 metres il mesurerait
+encore 0,90, c'est-a-dire qu'une porte au bout d'un couloir serait entendue
+aussi fort qu'une porte a un metre, et le listener se tromperait sur la
+distance. Je refuse aussi EXPONENTIAL avec rolloffFactor = 2 : a 12 metres
+il donnerait 1/144, soit 0,007 et -43 dB, la porte serait inaudible dans le
+couloir alors qu'on l'entendait a 12 metres avec le meme modele a l'exposant
+1. Concretement, mon reglage pour la porte serait donc : INVERSE,
+rolloffFactor = 1, minDistance 1 m, maxDistance 100 m, et le volume de la
+source regle pour que le grincement arrive audibles par-dessus l'ambiance du
+couloir. Et si la porte devait s'entendre de loin, c'est le volume de sa
+source et sa distance minimale qu'on touche, pas la loi : c'est le modele
+qui a le bon nom, et lui, on ne le change pas pour faire passer un son.

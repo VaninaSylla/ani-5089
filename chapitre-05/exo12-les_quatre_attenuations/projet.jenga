@@ -1,0 +1,39 @@
+# Fichier de projet Jenga pour exo12-les_quatre_attenuations
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+KIT_ROOT = r"C:\Users\ngono\Desktop\ani-5089\Kits\R3D"
+
+with workspace("Exo12Wks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    useconfig(KIT_ROOT + "/R3D.jenga")
+
+    with project("Exo12Attenuations"):
+        windowedapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["attenuations.cpp"])
+
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+
+        # Ce programme a besoin de NKAudio (moteur de son, melange binaural).
+        # Le kit R3D le contient, avec le reste : on garde user3d() et
+        # Kits/R3D/Resources.
+        user3d()
+
+        # Le kit a ete compile avec un autre llvm-mingw (NKCode 1.0.7) que le
+        # notre : libc++ est embarque a la fois dans NKGLSlang.lib et dans le
+        # libc++.a du compilateur. Les symboles sont identiques et benins ;
+        # on autorise les definitions multiples pour laisser passer le lien.
+        ldflags(["-Wl,--allow-multiple-definition"])
+
+        usetoolchain("clang-mingw")

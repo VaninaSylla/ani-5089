@@ -4,8 +4,8 @@ comments et lignes vides mis a part. C'est tout : une structure de
 configuration, l'appel a Initialize, quatre printf pour lire les valeurs
 annoncees, la fabrication du son, le Play, une boucle d'attente, et la
 fermeture. Aucune ligne de rendu, aucune fenetre, aucun fichier : le son est
-fabrique par le moteur lui-meme (AudioGenerator::GenerateTone(440, 1)),
-donc il n'y a rien a livrer avec le programme. Il est joue une fois, au
+fabrique par le moteur lui-meme (AudioGenerator::GenerateTone(440, 1)), donc
+il n'y a rien a livrer avec le programme. Il est joue une fois, au
 demarrage, sans position : je passe les VoiceParams par defaut, donc
 source3d.positional reste a faux et le son sort au milieu des deux oreilles,
 comme un son d'interface. Les deux details qui ont compte : le son se joue
@@ -17,33 +17,33 @@ et un moteur de son qu'on ne ferme pas tourne jusqu'a la fin du programme
 sans rien dire.
 
 Latence calculee et annoncee :
-La duree d'un tampon de 256 trames a 48000 Hz, calculee a la main, fait
-256 / 48000 = 5,333 ms. Le moteur, lui, annonce une latence de 22 ms : c'est
-4,1 tampons. L'ecart n'est pas une erreur, c'est la file : ce que le moteur
-annonce est la distance entre le moment ou j'appelle Play et l'instant ou
-le son sort des haut-parleurs, et elle comprend le tampon en cours, celui
-qui attend, les conversions de format et l'attente du materiel. Le backend,
-lui, est WASAPI, avec 48000 Hz et 2 canaux negocies, et un tampon effectif
-de 1056 frames par callback. Compare a l'image : une image de casque a 90 Hz
-dure 11,1 ms, une a 72 Hz 13,9 ms. Les 5,333 ms d'un tampon de son sont
-donc du meme ordre que la duree d'une image, et les 22 ms announces
-representent presque deux images a 90 Hz. C'est exactement le chiffre qu'il
-faut avoir en tete : on ne peut pas faire son et image dans le meme budget,
-il faut les decaler.
+La duree d'un tampon de 256 trames a 48000 Hz, calculee a la main, fait 256
+/ 48000 = 5,333 ms. Le moteur, lui, annonce une latence de 22 ms : c'est 4,1
+tampons. L'ecart n'est pas une erreur, c'est la file : ce que le moteur
+annonce est la distance entre le moment ou j'appelle Play et l'instant ou le
+son sort des haut-parleurs, et elle comprend le tampon en cours, celui qui
+attend, les conversions de format et l'attente du materiel. Le backend, lui,
+est WASAPI, avec 48000 Hz et 2 canaux negocies, et un tampon effectif de
+1056 frames par callback. Compare a l'image : une image de casque a 90 Hz
+dure 11,1 ms, une a 72 Hz 13,9 ms. Les 5,333 ms d'un tampon de son sont donc
+du meme ordre que la duree d'une image, et les 22 ms announces representent
+presque deux images a 90 Hz. C'est exactement le chiffre qu'il faut avoir en
+tete : on ne peut pas faire son et image dans le meme budget, il faut les
+decaler.
 
 Pourquoi pas dans la boucle de rendu :
 On ne calcule jamais le son dans la boucle de rendu, pour une raison de
-temps et une raison de structure. Le temps d'abord : la boucle de rendu a
-un budget de quelques millisecondes pour toute l'image, et y ajouter le
-calcul du son, c'est-a-dire remplir 256 trames, lui vole le budget de
-l'image et fait tomber la cadence. La structure ensuite : le son n'est pas
-une image, c'est un flux continu. Si je le calculais dans la boucle, il
-faudrait que la boucle produise exactement le nombre de trames que la carte
-audio consomme, a chaque image, sans le savoir a l'avance : c'est le genre
-de synchronisation qui fait vibrer le son des que la cadence bouge. Le
-moteur le fait a ma place : il a son propre fil, il melange dans son propre
-tampon, et ma boucle ne fait que lui dire quoi jouer. La seule chose que je
-dois respecter, c'est de ne pas lui demander quelque chose dans la boucle de
+temps et une raison de structure. Le temps d'abord : la boucle de rendu a un
+budget de quelques millisecondes pour toute l'image, et y ajouter le calcul
+du son, c'est-a-dire remplir 256 trames, lui vole le budget de l'image et
+fait tomber la cadence. La structure ensuite : le son n'est pas une image,
+c'est un flux continu. Si je le calculais dans la boucle, il faudrait que la
+boucle produise exactement le nombre de trames que la carte audio consomme,
+a chaque image, sans le savoir a l'avance : c'est le genre de
+synchronisation qui fait vibrer le son des que la cadence bouge. Le moteur
+le fait a ma place : il a son propre fil, il melange dans son propre tampon,
+et ma boucle ne fait que lui dire quoi jouer. La seule chose que je dois
+respecter, c'est de ne pas lui demander quelque chose dans la boucle de
 rendu. Mon programme le montre bien : la boucle d'attente de deux secondes
 ne fait rien d'autre que laisser le temps passer, et pendant ce temps c'est
 le fil du moteur qui melange les 256 trames du sinus. C'est aussi pour cela

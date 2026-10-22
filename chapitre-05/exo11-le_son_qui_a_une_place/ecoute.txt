@@ -1,0 +1,100 @@
+Position 1 :
+Camera a (-1,55 ; 1,60 ; -0,90), c'est-a-dire a 0,47 m de la pluie, juste
+devant la fenetre, et la source est a 90 degres de mon regard, exactement
+sur ma gauche. Ce point est en deca de la distance minimale que j'ai choisie
+(1 m) : le son ne s'attenue donc pas du tout. A l'oreille : une pluie tres
+forte, avec un vent permanent qui domine la pluie, et l'intensite qui
+augmentait vers la fin. Le vent, je l'explique par la HRTF : la source est a
+90 degres sur le cote, donc tres filtree par l'oreille et l'ombre de la tete
+(mesure : 0,137809 dans l'oreille directe contre 0,058306 dans l'autre, pres
+de 7 dB d'ecart), et du bruit rose filtre comme cela s'entend comme du vent.
+L'intensite qui monte, elle, n'est pas dans le mix : j'ai mesure le niveau
+seconde par seconde sur 30 secondes, il est plat, entre 0,0479 et 0,0525,
+avec une oscillation de 5 % qui a la periode de 4 secondes de la boucle, et
+aucune derive. Ce qui augmentait, c'est moi : en tournant la tete vers la
+fenetre, la source passait de 90 degres sur le cote a devant moi, l'ombre de
+la tete se levait, et le son gagnait en intensite. C'est exactement ce que
+la HRTF est censee faire. La mesure confirme le fort : c'est le niveau le
+plus eleve des trois positions, 0,105808 au total.
+
+Position 2 :
+Camera au centre de la piece, en (0 ; 1,60 ; 0), toujours regarde vers la
+fenetre. La pluie est alors a 2,18 m, et le modele inverse avec un facteur
+de chute de 1 donne un gain de 0,458. A l'oreille, j'ai entendu "presque
+comme le 1" : c'est la que mon oreille et la mesure divergent le plus. La
+mesure dit 0,050067 au total, contre 0,105808 a la premiere position, soit
+-6,5 dB, et c'est exactement l'attenuation attendue. Trois raisons
+expliquent que je ne l'entende pas. D'abord, mon angle d'ecoute a change :
+la source est a 65,6 degres sur ma gauche au lieu de 90, donc l'ombre de la
+tete pese moins, et une partie de l'attenuation de distance se trouve
+compensee. Ensuite, sur un bruit large bande, l'oreille juge la hauteur bien
+plus mollement que sur un ton : -6,5 dB de bruit rose s'entend "presque
+pareil", la ou -6,5 dB sur un sinus serait net. Enfin, le casque Bluetooth
+applique un gain automatique qui resserre l'ecart entre un signal fort et un
+signal faible. Je garde la mesure telle quelle et je note l'ecart.
+
+Position 3 :
+Camera dans le coin oppose, en (1,60 ; 1,60 ; 1,60). La pluie est a 4,37 m,
+gain 0,229, et la source reste a 55 degres sur ma gauche parce que je garde
+le regard tourne vers la fenetre. La, la difference s'entend : j'ai entendu
+la pluie plus legere et plus basse que dans les deux autres positions. La
+mesure donne 0,025344 au total, soit -12,4 dB par rapport a la premiere
+position et -5,9 dB par rapport a la deuxieme. C'est le seul ecart qui passe
+sous mon oreille, et c'est logique : c'est le seul ou la difference est
+assez grande pour sortir de la compression de l'oreille et du gain
+automatique du casque.
+
+Sans positional :
+J'ai refait la position 2 en enlevant le placement (le drapeau
+source3d.positional a faux, tout le reste identique). Ce que j'ai entendu,
+c'est un son qui ne donne pas du cote droit, et qui n'est plus la ou etait
+la pluie. Ce n'est pas une panne du casque : c'est le resultat attendu. Sans
+placement, le son n'est plus dirige, il sort egalement des deux oreilles :
+la mesure donne 0,155012 a gauche et 0,155012 a droite, c'est-a-dire
+exactement les memes, et 0,153310 et 0,158316 aux deux autres positions,
+soit un niveau constant a moins de 6 % pres, quelle que soit la distance. La
+pluie est donc devenue une bande-son, et non plus un son qui vient d'une
+fenetre. Pour verifier que le moteur place bien le son de l'autre cote, j'ai
+fait un controle : source deplacee sur le mur de droite. La mesure donne
+alors 0,040652 a droite contre 0,016962 a gauche, soit un rapport de 2,4,
+qui est exactement l'image miroir de la premiere position (0,137809 a gauche
+contre 0,058306 a droite, un rapport de 2,36) : la sortie du moteur est donc
+bien stereo et symetrique, et c'est bien elle qui place le son. Ce que mon
+casque ne m'a pas rendu, c'est le canal droit, et j'en ai fait le diagnostic :
+le canal droit de mon casque est mort. Avec la source a droite, je n'entends
+qu'un son faible et etouffe, qui est en realite la fuite de l'oreille
+opposee, pas le son direct ; et le niveau que j'entends alors est deux fois
+et demie plus bas que le niveau mesure dans l'oreille directe. Ce n'est donc
+pas le programme, ni la HRTF, ni le moteur : c'est le materiel. Consequence
+pour cet exercice : l'ecoute a l'oreille n'a pu verifier que le cote gauche,
+et c'est la mesure qui etablit l'image stereo. C'est precisement le role du
+journal : quand une oreille ne peut pas trancher, on mesure, et on dit ce
+que l'oreille ne pouvait pas dire.
+
+Ce que les mesures montrent :
+Une precision avant tout : le bruit rose est regenere a chaque execution,
+donc les valeurs bougent de quelques milliemes d'un lancement a l'autre ;
+celles que je cite sont celles du lancement livre (mesures.txt, et le mode
+POSITIONS du meme programme). Les six mesures de mesures.txt disent la meme
+chose que le calcul, et disent aussi ce que je n'attendais pas. Avec
+positional : la source a gauche donne 0,070288 a gauche et 0,029198 a droite ;
+la source a droite donne 0,028000 a gauche et 0,068419 a droite ; la source
+devant donne 0,071859 et 0,071859, exactement egaux. L'egite parfaite
+devant, et l'egite en miroir quand on echange la source de gauche a droite,
+disent que la spatialisation n'est pas un simple panorama : le son est
+dirige, et l'angle compte. Ce que je n'attendais pas, c'est l'oreille
+opposee : elle n'est PAS muette. Elle recoit 0,029198 quand la source est a
+gauche, soit 41 % du niveau de l'oreille directe. Ce n'est pas une panne,
+c'est l'ombre de la tete et la fuite du casque : c'est exactement ce que le
+jeu de filtres binauraux simule, et c'est ce qui rend l'ecoute au casque
+differente de l'ecoute a un haut-parleur, ou les deux oreilles recoivent le
+meme melange. Sans positional, les trois positions donnent le meme niveau
+dans les deux oreilles (0,155 / 0,153 / 0,158), a moins de 6 % pres : la
+distance n'a plus aucune prise, et l'orientation non plus. Enfin l'ecart de
+niveau que je n'attendais pas : avec positional, on mesure 0,070 a 0,072 par
+oreille, contre 0,153 a 0,164 sans. Un son place est donc environ deux fois
+plus faible qu'un son non place a distance egale : la spatialisation
+repartit l'energie entre les deux oreilles et l'ombre de la tete en retire
+une partie. Concretement, on ne regle pas le volume d'un son place comme
+celui d'un son de bande-son, et c'est une mesure comme celle-la qui evite de
+se tromper d'un facteur deux.

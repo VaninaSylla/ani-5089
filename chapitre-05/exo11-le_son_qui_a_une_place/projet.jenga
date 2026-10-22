@@ -1,0 +1,55 @@
+# Fichier de projet Jenga pour exo11-le_son_qui_a_une_place
+#
+# Deux programmes dans deux projets : la salle qui joue le son place
+# (son-place.cpp, avec fenetre) et le programme de mesure (mesure.cpp, sans
+# fenetre et sans sortie sonore).
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+KIT_ROOT = r"C:\Users\ngono\Desktop\ani-5089\Kits\R3D"
+
+with workspace("Exo11Wks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    useconfig(KIT_ROOT + "/R3D.jenga")
+
+    # La salle qui joue la pluie placee derriere la fenetre.
+    with project("SonPlace"):
+        windowedapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["son-place.cpp"])
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+        # NKAudio (moteur de son, son spatialise, HRTF), NKTime et tout le
+        # renderer : le kit R3D les contient tous.
+        user3d()
+        # Le kit a ete compile avec un autre llvm-mingw (NKCode 1.0.7) que le
+        # notre : libc++ est embarque a la fois dans NKGLSlang.lib et dans
+        # le libc++.a du compilateur. Les symboles sont identiques et benins ;
+        # on autorise les definitions multiples pour laisser passer le lien.
+        ldflags(["-Wl,--allow-multiple-definition"])
+        usetoolchain("clang-mingw")
+
+    # Le programme de mesure : ni fenetre, ni sortie sonore.
+    with project("Mesure"):
+        consoleapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["mesure.cpp"])
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+        user3d()
+        ldflags(["-Wl,--allow-multiple-definition"])
+        usetoolchain("clang-mingw")

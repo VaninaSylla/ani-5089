@@ -1,8 +1,50 @@
 A trois metres :
-A trois metres, les deux versions se lisent sans effort et on ne les distingue pas a l'oeil : meme mot, meme vert, memes lettres. La raison est la memoire de l'image : les deux images font 575 x 256 pixels, c'est-a-dire huit fois la taille des lettres de l'atlas, et a cette distance un pixel de l'image ne fait pas encore assez de place pour qu'on voie la difference de traitement du bord. Les deux atlas, eux, ont exactement la meme taille, 512 x 512 : le mode distance signee ne coute rien de plus en memoire que la couverture, a la meme taille de police. C'est deja un resultat : on peut passer d'un mode a l'autre sans rien payer.
+A trois metres, les deux versions se lisent sans effort et on ne les
+distingue pas a l'oeil : meme mot, meme vert, memes lettres. La raison est
+la memoire de l'image : les deux images font 575 x 256 pixels, c'est-a-dire
+huit fois la taille des lettres de l'atlas, et a cette distance un pixel de
+l'image ne fait pas encore assez de place pour qu'on voie la difference de
+traitement du bord. Les deux atlas, eux, ont exactement la meme taille, 512
+x 512 : le mode distance signee ne coute rien de plus en memoire que la
+couverture, a la meme taille de police. C'est deja un resultat : on peut
+passer d'un mode a l'autre sans rien payer.
 
 A cinquante centimetres :
-A cinquante centimetres, la difference saute aux yeux. Le panneau ordinaire est flou : les bords des lettres sont des degrades, le S a perdu son angle, le e se coule dans le fond. Le panneau SDF reste net : les contours sont francs, les angles du S tiennent, les lettres gardent leur forme. La raison est dans la donnee elle-meme. L'atlas ordinaire ne stocke qu'une chose par pixel : combien la lettre couvre ce point (0 a 1). A l'echelle, on interpole cette valeur, et une valeur interpolee reste floue : c'est une couverture, pas une position. L'atlas SDF stocke la distance au bord de la lettre, avec un signe, et la distance s'interpole proprement. Le nuanceur que j'ai ecrit fait le reste : il transforme la distance en couverture, avec un bord d'epaisseur reglable. J'ai essaye plusieurs valeurs de s, et j'ai garde 0,05 : c'est celle qui donne le bord le plus net (le gradient moyen sur le contour vaut 59, contre 38 pour s = 0,10, 29 pour 0,15 et 27 pour 0,20) tout en ne produisant aucune transition dure d'un seul pixel, c'est-a-dire aucun escalier. Un s plus petit (0,01) serait plus net encore, mais le bord commence alors a scintiller. Ce qui reste d'escalier dans la version SDF vient de l'atlas lui-meme : l'atlas est en 32 pixels, donc la courbe d'une lettre est quantifiee sur 32 pixels, et l'image de sortie etant huit fois plus grande, un pixel d'atlas vaut huit pixels de sortie. Ce n'est pas la methode qui est en cause, c'est la taille de l'atlas.
+A cinquante centimetres, la difference saute aux yeux. Le panneau ordinaire
+est flou : les bords des lettres sont des degrades, le S a perdu son angle,
+le e se coule dans le fond. Le panneau SDF reste net : les contours sont
+francs, les angles du S tiennent, les lettres gardent leur forme. La raison
+est dans la donnee elle-meme. L'atlas ordinaire ne stocke qu'une chose par
+pixel : combien la lettre couvre ce point (0 a 1). A l'echelle, on interpole
+cette valeur, et une valeur interpolee reste floue : c'est une couverture,
+pas une position. L'atlas SDF stocke la distance au bord de la lettre, avec
+un signe, et la distance s'interpole proprement. Le nuanceur que j'ai ecrit
+fait le reste : il transforme la distance en couverture, avec un bord
+d'epaisseur reglable. J'ai essaye plusieurs valeurs de s, et j'ai garde 0,05 :
+c'est celle qui donne le bord le plus net (le gradient moyen sur le contour
+vaut 59, contre 38 pour s = 0,10, 29 pour 0,15 et 27 pour 0,20) tout en ne
+produisant aucune transition dure d'un seul pixel, c'est-a-dire aucun
+escalier. Un s plus petit (0,01) serait plus net encore, mais le bord
+commence alors a scintiller. Ce qui reste d'escalier dans la version SDF
+vient de l'atlas lui-meme : l'atlas est en 32 pixels, donc la courbe d'une
+lettre est quantifiee sur 32 pixels, et l'image de sortie etant huit fois
+plus grande, un pixel d'atlas vaut huit pixels de sortie. Ce n'est pas la
+methode qui est en cause, c'est la taille de l'atlas.
 
 Ma conclusion :
-La distance signee est le bon outil pour un texte qui doit rester lisible a toute distance, et elle est gratuite : a 32 pixels de police, l'atlas SDF occupe les memes 512 x 512 pixels que l'atlas ordinaire, et l'image composee est identique en taille (575 x 256 de chaque cote), ce qui permet de comparer les deux methodes a taille egale et de ne mesurer que la methode. Ce que j'ai paye, en revanche, c'est du calcul CPU fait une fois pour toutes : sans le nuanceur du moteur, une texture n'affiche que ce qu'elle contient, et c'est a moi de reconstruire la distance en couverture. Le cout en memoire, lui, se voit surtout quand on change la taille de la police : l'atlas ordinaire a 128 pixels fait 2048 x 2048, contre 512 x 512 a 32 pixels, soit seize fois plus de pixels, donc seize fois plus de memoire pour la texture. Un panneau de sortie qu'on regarde de loin n'a besoin ni de 128 pixels ni d'un atlas SDF ; un panneau qu'on lit a cinquante centimetres, comme celui de l'exercice precedent, a besoin de l'un ou de l'autre. A 32 pixels, la distance signee est le choix qui fait le mieux : le bord reste net a distance, et le cout en memoire reste celui de la police.
+La distance signee est le bon outil pour un texte qui doit rester lisible a
+toute distance, et elle est gratuite : a 32 pixels de police, l'atlas SDF
+occupe les memes 512 x 512 pixels que l'atlas ordinaire, et l'image composee
+est identique en taille (575 x 256 de chaque cote), ce qui permet de
+comparer les deux methodes a taille egale et de ne mesurer que la methode.
+Ce que j'ai paye, en revanche, c'est du calcul CPU fait une fois pour toutes :
+sans le nuanceur du moteur, une texture n'affiche que ce qu'elle contient,
+et c'est a moi de reconstruire la distance en couverture. Le cout en
+memoire, lui, se voit surtout quand on change la taille de la police :
+l'atlas ordinaire a 128 pixels fait 2048 x 2048, contre 512 x 512 a 32
+pixels, soit seize fois plus de pixels, donc seize fois plus de memoire pour
+la texture. Un panneau de sortie qu'on regarde de loin n'a besoin ni de 128
+pixels ni d'un atlas SDF ; un panneau qu'on lit a cinquante centimetres,
+comme celui de l'exercice precedent, a besoin de l'un ou de l'autre. A 32
+pixels, la distance signee est le choix qui fait le mieux : le bord reste
+net a distance, et le cout en memoire reste celui de la police.

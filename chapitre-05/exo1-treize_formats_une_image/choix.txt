@@ -1,8 +1,24 @@
 Mon format pour un mur :
-JPEG. La photo mesure 1024 x 1024 pixels, et c'est le fichier le plus petit des cinq relus (482966 octets contre 3049309 pour le PNG, 3145782 pour le BMP et 3145772 pour le TGA). Pour un mur de beton photographie, cette difference de place compte, et l'oeil ne voit pas la perte a la distance ou le mur se regarde.
+JPEG. La photo mesure 1024 x 1024 pixels, et c'est le fichier le plus petit
+des cinq relus (198983 octets contre 942680 pour le PNG, 3145782 pour le BMP
+et 3145772 pour le TGA). Pour un mur de beton photographie, cette difference
+de place compte, et l'oeil ne voit pas la perte a la distance ou le mur se
+regarde.
 
 Pourquoi :
-Le choix se fait sur les tailles mesurees, pas sur une impression. Le format brut (BMP, TGA) garde tous les pixels mais pese le plus lourd ; le PNG compresse sans perte et reste raisonnable ; le JPEG compresse avec perte et gagne nettement sur une photographie, qui contient peu de grandes zones uniformes. Un mur est une photographie, pas un logo : le JPEG est fait pour ce cas.
+Le choix se fait sur les tailles mesurees, pas sur une impression. Le format
+brut (BMP, TGA) garde tous les pixels mais pese le plus lourd ; le PNG
+compresse sans perte et reste raisonnable ; le JPEG compresse avec perte et
+gagne nettement sur une photographie, qui contient peu de grandes zones
+uniformes. Un mur est une photographie, pas un logo : le JPEG est fait pour
+ce cas.
 
 Ce qui m'a surpris :
-Un fichier compresse avec perte jette de l'information pour toujours : le JPEG relu fait bien 1024 x 1024 pixels comme la photo d'origine, mais les valeurs de ses pixels ne sont plus celles de la source. Ouvrir une photo, la reecrire en JPEG, puis recommencer encore, degrade l'image a chaque tour. Le format sans perte (PNG) ne perd rien, au prix de la taille. J'ai aussi vu qu'un fichier ecrit n'est pas forcement relisible : seul le fait de le relire le prouve, et la taille sur le disque n'a rien a voir avec la memoire qu'il occupe une fois charge en pixels bruts.
+Un fichier compresse avec perte jette de l'information pour toujours : le
+JPEG relu fait bien 1024 x 1024 pixels comme la photo d'origine, mais les
+valeurs de ses pixels ne sont plus celles de la source. Ouvrir une photo, la
+reecrire en JPEG, puis recommencer encore, degrade l'image a chaque tour. Le
+format sans perte (PNG) ne perd rien, au prix de la taille. J'ai aussi vu
+qu'un fichier ecrit n'est pas forcement relisible : seul le fait de le
+relire le prouve, et la taille sur le disque n'a rien a voir avec la memoire
+qu'il occupe une fois charge en pixels bruts.

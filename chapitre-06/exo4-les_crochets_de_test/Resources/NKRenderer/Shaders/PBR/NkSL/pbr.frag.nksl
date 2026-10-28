@@ -1,0 +1,1046 @@
+// AUTEUR : TEUGUIA TADJUIDJE Rodolf Séderis — Rihen
+// pbr.frag.nksl — NKRenderer — PBR Fragment (VRAI dialecte NkSL)
+// Traduit de PBR/VK/pbr.frag.vk.glsl. PBR Metallic-Roughness + IBL + CSM shadows +
+// Clearcoat + SSS + triplanar. Blocs UBO développés une-décl-par-ligne (vs virgules).
+
+@location(0) in vec3 vWorldPos;
+@location(1) in vec3 vNormal;
+@location(2) in vec3 vTangent;
+@location(3) in vec3 vBitangent;
+@location(4) in vec2 vUV;
+@location(5) in vec2 vUV2;
+@location(6) in vec4 vColor;
+
+@location(0) out vec4 fragColor;
+
+@binding(set=0, binding=0)
+uniform CameraUBO {
+    mat4  view;
+    mat4  proj;
+    mat4  viewProj;
+    mat4  invViewProj;
+    vec4  camPos;
+    vec4  camDir;
+    vec2  viewport;
+    float time;
+    float deltaTime;
+    float iblStrength;
+    float _p0;
+    float viewMode;      // 0=RENDERED (PBR éclairé) ; >0.5 = SOLID/UNLIT (matcap)
+    float matcapId;      // matcap en mode SOLID/WIREFRAME : index 0..29 dans l'atlas
+    mat4  mirrorViewProj;
+    vec4  reflectionFlags;
+    vec4  viewOpts;      // .x=1 si matcap PERSONNALISEE (texture seule, pas l'atlas) ; .yzw reserve
+    vec4  iblColor;      // .xyz = teinte de l'ambiance (World Color) ; .w = 1 si un monde est charge
+    vec4  fogColor;      // .xyz = couleur du brouillard ; .w = densite
+    vec4  fogParams;     // .x = actif ; .y = debut ; .z = fin ; .w = 0 lineaire, 1 exponentiel
+    // Le CIEL occupe VINGT-QUATRE vec4 cote C++ (8 parametres, 4 lunes, phase,
+    // etoiles, 9 coefficients Hosek, radiance) ; ce shader ne le lit pas, mais
+    // il doit le SAUTER exactement pour retomber sur le brouillard au sol.
+    // Une erreur d'UN seul vec4 ici decale tout le bloc et corrompt le rendu.
+    vec4  _skyPad[24];
+    vec4  fogHeight;     // .x = altitude de base ; .y = epaisseur ; .z = souffle ; .w = temps
+} uCam;
+
+@binding(set=1, binding=1)
+uniform ObjectUBO {
+    mat4  model;
+    mat4  normalMatrix;
+    vec4  tint;
+    float metallic;
+    float roughness;
+    float aoStrength;
+    float emissiveStrength;
+    float normalStrength;
+    float clearcoat;
+    float clearcoatRoughness;
+    float subsurface;
+    vec4  subsurfaceColor;
+    vec4  shadowOverrides;
+    vec4  triplanarParams;
+    // MOUILLAGE (2026-09-06). Deux scalaires suffisent a toute la formule de
+    // Lagarde « Water drop 3b » : elle ne depend du mouillage et de la porosite
+    // que par leur PRODUIT. Le pincement est fait cote C++ (NkRender3D.cpp), une
+    // seule fois, la ou un temoin peut le lire.
+    //   .x = wetK   = mouillage x porosite
+    //   .y = waterK = mouillage x pellicule d'eau
+    //   .z .w = reserve
+    // ⚠️ Ce membre doit etre declare DANS LES DEUX etages, meme inutilise au
+    // vertex : un bloc uniforme partage dont les deux declarations different
+    // est refuse par le lien GL, ou pire, lu de travers.
+    vec4  wetParams;
+} uObj;
+
+@binding(set=0, binding=2)
+uniform LightsUBO {
+    vec4 positions[32];
+    vec4 colors[32];
+    vec4 directions[32];
+    vec4 angles[32];
+    int  count;
+    // TROIS SCALAIRES, PAS UN TABLEAU (piege std140 qui a fait reverter la
+    // tentative precedente) : `int _pad[3]` a un pas de 16 octets par element
+    // (48 au total) alors que le C++ n'en met que 12 — `extras` aurait ete lu
+    // 36 octets trop loin et toute la scene devenait meconnaissable.
+    int  _pad0;
+    int  _pad1;
+    int  _pad2;
+    // .x = loi d'attenuation (0 heritee, 1 physique 1/d^2 fenetree)
+    // .y = largeur de la surfacique (m)   .z = hauteur (m)   .w reserve
+    // En QUEUE de bloc : les autres shaders (Skin, Layered, CarPaint...)
+    // declarent le bloc court et lisent `count` au meme endroit qu'avant.
+    vec4 extras[32];
+} uLights;
+
+struct NkShadowSlot {
+    mat4 shadowMatrix;
+    vec4 tileUV;
+    vec4 lightPosOrDir;
+    vec4 packedIds;
+};
+
+@binding(set=0, binding=3)
+uniform ShadowSlotsUBO {
+    NkShadowSlot slots[256];
+    vec4         firstSlotPerLight[8];
+    vec4         slotCountPerLight[8];
+    vec4         globalCfg;
+    vec4         biasParams;
+} uShadows;
+
+// Matériau (set=2) : albedo/normal/ORM/emissive.
+@binding(set=2, binding=3)  uniform sampler2D   tAlbedo;
+@binding(set=2, binding=4)  uniform sampler2D   tNormal;
+@binding(set=2, binding=5)  uniform sampler2D   tORM;
+@binding(set=2, binding=6)  uniform sampler2D   tEmissive;
+// Carte de HAUTEUR du parallax (BLANC = haut). Repli 1x1 blanc : sans
+// echelle (triplanarParams.w = 0) la boucle n'est jamais prise.
+@binding(set=2, binding=7)  uniform sampler2D   tHeight;
+// Parametres du MATERIAU (set=2 binding=8, layout exact de NkPBRParams).
+// Toujours lie : meme les draws sans materiau recoivent l'instance de repli.
+//
+// 2026-08-27 — SIX CHAMPS DE SURFACE SE LISENT DESORMAIS ICI, plus l'anisotropie
+// et le sheen : ao, normalStrength, subsurface, subsurfaceColor, clearcoat,
+// clearcoatRough. Ils venaient de `uObj` (le draw call) ; l'application alimente
+// maintenant l'INSTANCE aux memes points de changement.
+//
+// ⚠ CE QUI N'A PAS BASCULE, ET POURQUOI — albedo (via uObj.tint), metallic et
+// roughness RESTENT sur `uObj`.
+//
+// SEPT sites de draw call n'attachent AUCUNE instance de materiau : le sol, le
+// mur GI, la grille 4x4 (qui balaie justement metallic et roughness), le cube
+// central, les colonnes, l'objet edite persiste, et l'objet du MODE EDITION.
+// Tous appellent bien `HostMatHook`, mais celui-ci ne pose JAMAIS `dc.material`
+// et `HostMatSlotToDC` sort tot quand le noeud n'a pas de materiau de projet --
+// or seuls les noeuds UTILISATEUR en recoivent un a la creation
+// (`HostEnsureDefaultMat`). Leurs valeurs codees survivent donc, et ce sont
+// elles que `uObj` porte. Les basculer les ferait retomber sur l'instance de
+// REPLI, partagee par tous : grille aplatie a metallic 0 / roughness 0.5.
+//
+// ⚠ ET LA SCENE DE REFERENCE NE LE MONTRERAIT PAS : ces objets n'y sont pas
+// visibles. Le temoin serait VERT et la regression REELLE.
+//
+// ⚠ CORRECTION D'UN COMPTE FAUX (le commit 5b44131a dit HUIT). Le huitieme site
+// -- le dessin des MAILLAGES UTILISATEUR -- attache bien une instance, et
+// `HostMatHook` y ecrase les valeurs codees par celles du materiau. Pour lui,
+// `uObj` et `uMat` portent donc DEJA la meme chose : il serait sur. C'etait le
+// seul site du PRODUIT dans ma liste, et je l'avais range du mauvais cote.
+//
+// CE QUE CA VEUT DIRE POUR LA SUITE : ces trois champs ne sont pas en attente
+// d'un echange atomique, ils sont en attente d'une DECISION. `uObj` est le
+// canal d'a-cote assume pour les draws sans materiau -- la structure du draw
+// call le dit elle-meme (« PBR override per-drawcall »). Les migrer exigerait
+// de donner une instance PROPRE a ces sept draws (la grille en demanderait
+// SEIZE pour garder son balayage), ce qui change ce qui est a l'ecran. Aucun
+// drapeau d'arbitrage n'est possible : NkPBRParams est PLEIN a 96 octets.
+// Et `uObj.tint` porte en plus la surbrillance de selection et le gris du mode
+// edition : trois usages dans un champ.
+//
+// Les six ci-dessus n'ont, eux, qu'un seul ecrivain (`HostMatSlotToDC`) ou aucun.
+//
+// ⚠ DIVERGENCE LATENTE — LA FAMILLE ECRITE A LA MAIN N'A PAS SUIVI.
+// Les shaders PBR ecrits a la main (VK/GL/DX11/MSL) lisent TOUJOURS ces six
+// champs dans l'UBO OBJET. Aujourd'hui ca ne se voit pas : l'application
+// alimente les DEUX sources avec les memes valeurs. Mais NkSL est PREFERE
+// quand il compile, et le repli ne sert que s'il ECHOUE --
+//   UNE DIVERGENCE QUI NE SE MANIFESTE QU'EN MODE DEGRADE EST INVISIBLE TANT
+//   QUE RIEN NE DEGRADE, ET ELLE FRAPPE EXACTEMENT LE JOUR OU L'ON A LE MOINS
+//   DE MOYENS DE LA DIAGNOSTIQUER.
+// Le premier cas qui la rendra visible est deja identifie : `subsurfaceColor`
+// n'a PAS le meme defaut des deux cotes -- {1,1,1} sur le draw call,
+// {1,0.5,0.3} dans NkPBRParams. Inoffensif tant que `subsurface` vaut 0 ; le
+// jour ou quelqu'un l'ouvre ET tombe sur un repli, la teinte de diffusion
+// changera sans que rien dans la scene ne l'explique.
+// Qui touche a ces six champs ici doit toucher l'autre famille, ou ecrire
+// pourquoi il ne le fait pas.
+@binding(set=2, binding=8)
+uniform MaterialUBO {
+    vec4  albedo;
+    vec4  emissive;
+    float metallic;
+    float roughness;
+    float ao;
+    float emissiveStrength;
+    float normalStrength;
+    float clearcoat;
+    float clearcoatRough;
+    float subsurface;
+    vec4  subsurfaceColor;
+    float anisotropy;
+    float sheen;
+    float reflFloorFaceMode;
+    float reflBlend;
+} uMat;
+@binding(set=0, binding=8)  uniform samplerCube tEnvIrradiance;
+@binding(set=0, binding=9)  uniform samplerCube tEnvPrefilter;
+@binding(set=0, binding=10) uniform sampler2D   tBRDFLUT;
+@binding(set=0, binding=26) uniform samplerCube tSkyEnvCube;
+@binding(set=0, binding=27) uniform sampler3D   tVoxelOpacity;
+@binding(set=0, binding=11) uniform sampler2DShadow tShadowAtlas;
+@binding(set=0, binding=12) uniform sampler2D       tShadowAtlasRaw;
+#include "Include/NkShadowAtlas.glsli"
+
+@binding(set=0, binding=13) uniform sampler2D tLight3DCookie0;
+@binding(set=0, binding=14) uniform sampler2D tLight3DCookie1;
+@binding(set=0, binding=15) uniform sampler2D tLight3DCookie2;
+@binding(set=0, binding=16) uniform sampler2D tLight3DCookie3;
+@binding(set=0, binding=17) uniform sampler2D tLight3DCookie4;
+@binding(set=0, binding=18) uniform sampler2D tLight3DCookie5;
+@binding(set=0, binding=19) uniform sampler2D tLight3DCookie6;
+@binding(set=0, binding=20) uniform sampler2D tLight3DCookie7;
+
+@binding(set=0, binding=21) uniform samplerCube tLight3DCubeCookie0;
+@binding(set=0, binding=22) uniform samplerCube tLight3DCubeCookie1;
+@binding(set=0, binding=23) uniform samplerCube tLight3DCubeCookie2;
+@binding(set=0, binding=24) uniform samplerCube tLight3DCubeCookie3;
+
+// Boule MatCap (mode SOLID/WIREFRAME) : échantillonnée par la normale en espace-vue.
+@binding(set=0, binding=28) uniform sampler2D tMatcap;
+// Tables LTC (Heitz 2016) : 29 = matrice inverse M^-1 ajustee sur GGX,
+// 30 = normalisation GGX / Fresnel / spherisation d'horizon. Chargees par
+// NkRender3D depuis Resources/NKRenderer/LUT ; uCam.viewOpts.z = 1 si valides.
+@binding(set=0, binding=29) uniform sampler2D tLTC1;
+@binding(set=0, binding=30) uniform sampler2D tLTC2;
+
+float SampleLight3DCubeCookie(int idx, vec3 dir) {
+    if (idx == 0) return texture(tLight3DCubeCookie0, dir).r;
+    if (idx == 1) return texture(tLight3DCubeCookie1, dir).r;
+    if (idx == 2) return texture(tLight3DCubeCookie2, dir).r;
+    if (idx == 3) return texture(tLight3DCubeCookie3, dir).r;
+    return 1.0;
+}
+
+#include "Include/NkVoxelAO.glsli"
+
+float SampleLight3DCookie(int idx, vec2 uv) {
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
+    if (idx == 0) return texture(tLight3DCookie0, uv).r;
+    if (idx == 1) return texture(tLight3DCookie1, uv).r;
+    if (idx == 2) return texture(tLight3DCookie2, uv).r;
+    if (idx == 3) return texture(tLight3DCookie3, uv).r;
+    if (idx == 4) return texture(tLight3DCookie4, uv).r;
+    if (idx == 5) return texture(tLight3DCookie5, uv).r;
+    if (idx == 6) return texture(tLight3DCookie6, uv).r;
+    if (idx == 7) return texture(tLight3DCookie7, uv).r;
+    return 1.0;
+}
+
+const float PI = 3.14159265358979;
+
+float D_GGX(vec3 N, vec3 H, float r) {
+    float a=r*r, a2=a*a, NdH=max(dot(N,H),0.0);
+    float d=NdH*NdH*(a2-1.0)+1.0;
+    return a2/(PI*d*d+1e-4);
+}
+float G_Schlick(float x, float k) { return x/(x*(1.0-k)+k); }
+float G_Smith(vec3 N, vec3 V, vec3 L, float r) {
+    float k=(r+1.0)*(r+1.0)/8.0;
+    return G_Schlick(max(dot(N,V),0.0),k)*G_Schlick(max(dot(N,L),0.0),k);
+}
+vec3 F_Schlick(float cosT, vec3 F0) {
+    return F0+(1.0-F0)*pow(max(1.0-cosT,0.0),5.0);
+}
+vec3 F_SchlickR(float cosT, vec3 F0, float r) {
+    return F0+(max(vec3(1.0-r),F0)-F0)*pow(max(1.0-cosT,0.0),5.0);
+}
+
+const vec2 kPoissonDisk[16] = vec2[](
+    vec2(-0.94201624, -0.39906216), vec2( 0.94558609, -0.76890725),
+    vec2(-0.094184101, -0.92938870), vec2( 0.34495938,  0.29387760),
+    vec2(-0.91588581,  0.45771432), vec2(-0.81544232, -0.87912464),
+    vec2(-0.38277543,  0.27676845), vec2( 0.97484398,  0.75648379),
+    vec2( 0.44323325, -0.97511554), vec2( 0.53742981, -0.47373420),
+    vec2(-0.26496911, -0.41893023), vec2( 0.79197514,  0.19090188),
+    vec2(-0.24188840,  0.99706507), vec2(-0.81409955,  0.91437590),
+    vec2( 0.19984126,  0.78641367), vec2( 0.14383161, -0.14100790)
+);
+
+vec3 NkTriplanarWeights(vec3 N) {
+    vec3 w = abs(N);
+    w = pow(w, vec3(4.0));
+    return w / max(w.x + w.y + w.z, 1e-5);
+}
+
+vec3 NkTriplanarSampleRGB(sampler2D tex, vec3 worldPos, vec3 w, float invTile) {
+    vec3 cYZ = texture(tex, worldPos.zy * invTile).rgb;
+    vec3 cXZ = texture(tex, worldPos.xz * invTile).rgb;
+    vec3 cXY = texture(tex, worldPos.xy * invTile).rgb;
+    return cYZ * w.x + cXZ * w.y + cXY * w.z;
+}
+
+vec4 NkTriplanarSampleRGBA(sampler2D tex, vec3 worldPos, vec3 w, float invTile) {
+    vec4 cYZ = texture(tex, worldPos.zy * invTile);
+    vec4 cXZ = texture(tex, worldPos.xz * invTile);
+    vec4 cXY = texture(tex, worldPos.xy * invTile);
+    return cYZ * w.x + cXZ * w.y + cXY * w.z;
+}
+
+vec3 NkTriplanarNormalUDN(sampler2D nMap, vec3 worldPos, vec3 N,
+                          vec3 w, float invTile, float strength) {
+    vec3 nYZ = texture(nMap, worldPos.zy * invTile).xyz * 2.0 - 1.0;
+    vec3 nXZ = texture(nMap, worldPos.xz * invTile).xyz * 2.0 - 1.0;
+    vec3 nXY = texture(nMap, worldPos.xy * invTile).xyz * 2.0 - 1.0;
+    nYZ.xy *= strength;
+    nXZ.xy *= strength;
+    nXY.xy *= strength;
+    vec3 wN_YZ = vec3(nYZ.xy + N.zy, N.x * sign(N.x));
+    vec3 wN_XZ = vec3(nXZ.xy + N.xz, N.y * sign(N.y));
+    vec3 wN_XY = vec3(nXY.xy + N.xy, N.z * sign(N.z));
+    vec3 outN = normalize(
+        vec3(wN_YZ.z, wN_YZ.y, wN_YZ.x) * w.x +
+        vec3(wN_XZ.x, wN_XZ.z, wN_XZ.y) * w.y +
+        vec3(wN_XY.x, wN_XY.y, wN_XY.z) * w.z
+    );
+    return outN;
+}
+
+// ── LTC : INTEGRALE D'ARETE (Heitz et al. 2016, forme vectorielle) ──────────
+// Approximation polynomiale de θ/sinθ, la meme que le code de reference —
+// c'est elle qui remplace le clipping polygonal explicite (la longueur du
+// vecteur somme + la table de spherisation d'horizon font le travail).
+vec3 NkLTCEdge(vec3 v1, vec3 v2) {
+    float x = dot(v1, v2);
+    float y = abs(x);
+    float a = 0.8543985 + (0.4965155 + 0.0145206 * y) * y;
+    float b = 3.4175940 + (4.1616724 + y) * y;
+    float v = a / b;
+    float tst = (x > 0.0) ? v
+                          : 0.5 / sqrt(max(1.0 - x * x, 1e-7)) - v;
+    return cross(v1, v2) * tst;
+}
+
+// ── PARALLAX OCCLUSION (LearnOpenGL, etape 3 du programme de Rihen) ─────────
+// La carte de hauteur CREUSE les UV selon l'angle de vue : les texels hauts
+// avancent, les bas reculent — le relief que la normal map seule ne donne pas.
+// Boucle a COMPTE CONSTANT + textureLod : un sample a gradient dans une boucle
+// dynamique fait echouer fxc (X3570, meme piege que les noyaux d'ombre).
+// viewTS = direction fragment->camera exprimee dans la base tangente.
+vec2 NkParallaxUV(vec2 uv, vec3 viewTS, float scale) {
+    const int kSteps = 24;
+    float layer = 1.0 / float(kSteps);
+    // L'angle rasant allonge le pas ; borne pour eviter l'etirement infini.
+    vec2 P = viewTS.xy / max(abs(viewTS.z), 0.15) * scale;
+    vec2 dUV = P * layer;
+    vec2 cur = uv;
+    float layerDepth = 0.0;
+    float mapDepth = 1.0 - textureLod(tHeight, cur, 0.0).r;
+    for (int i = 0; i < kSteps; ++i) {
+        if (layerDepth >= mapDepth)
+            break;
+        cur -= dUV;
+        mapDepth = 1.0 - textureLod(tHeight, cur, 0.0).r;
+        layerDepth += layer;
+    }
+    // Interpolation entre le pas d'avant et le pas courant (occlusion mapping) :
+    // sans elle, les couches se voient en bandes.
+    vec2 prev = cur + dUV;
+    float after = mapDepth - layerDepth;
+    float before = (1.0 - textureLod(tHeight, prev, 0.0).r) - layerDepth + layer;
+    float w = clamp(after / min(after - before, -1e-5), 0.0, 1.0);
+    return prev * w + cur * (1.0 - w);
+}
+
+@stage(fragment)
+@entry
+void main() {
+    bool  triplanarOn = uObj.triplanarParams.z > 0.5;
+    float tileMeters  = max(uObj.triplanarParams.x, 1e-4);
+    float mpu         = max(uObj.triplanarParams.y, 1e-4);
+    float invTile     = mpu / tileMeters;
+    vec3  geomN       = normalize(vNormal);
+    vec3  triW        = triplanarOn ? NkTriplanarWeights(geomN) : vec3(0.0);
+
+    // ── PARALLAX : les UV se creusent AVANT tout echantillonnage ────────────
+    // UV classiques seulement (le triplanaire n'a pas d'UV a creuser) et
+    // seulement si l'echelle est posee (triplanarParams.w, reserve devenue
+    // « relief »). La base tangente est reconstruite avec la meme robustesse
+    // que plus bas ; la direction de vue utilise la MEME camera que V (flip
+    // miroir compris), en dots explicites — pas d'operation matricielle.
+    vec2 uvP = vUV;
+    float parallaxScale = uObj.triplanarParams.w;
+    if (!triplanarOn && parallaxScale > 1e-4) {
+        // BASE TANGENTE PAR DERIVEES ECRAN (cadre cotangent de Schuler) :
+        // les tangentes de sommet peuvent etre nulles ou non alignees aux UV
+        // (cube de la demo) — le creusement partait alors dans une direction
+        // ARBITRAIRE par face (constate par Rihen : « pas bien sur tous les
+        // axes »). Ici T et B suivent EXACTEMENT le sens des UV du pixel,
+        // miroirs et rotations de faces compris. Derivees prises en flux
+        // uniforme (tout debut de main).
+        vec3 dpx = dFdx(vWorldPos);
+        vec3 dpy = dFdy(vWorldPos);
+        vec2 dux = dFdx(vUV);
+        vec2 duy = dFdy(vUV);
+        vec3 dp2perp = cross(dpy, geomN);
+        vec3 dp1perp = cross(geomN, dpx);
+        vec3 TnP = dp2perp * dux.x + dp1perp * duy.x;
+        vec3 BnP = dp2perp * dux.y + dp1perp * duy.y;
+        float invMax = 1.0 / sqrt(max(max(dot(TnP, TnP), dot(BnP, BnP)), 1e-20));
+        TnP *= invMax;
+        BnP *= invMax;
+        vec3 camP = uCam.camPos.xyz;
+        if (uCam.reflectionFlags.x > 0.5) camP.y = -camP.y;
+        vec3 vW = normalize(camP - vWorldPos);
+        vec3 vTS = vec3(dot(vW, TnP), dot(vW, BnP), dot(vW, geomN));
+        uvP = NkParallaxUV(vUV, vTS, parallaxScale);
+    }
+
+    vec4 albSample = triplanarOn
+        ? NkTriplanarSampleRGBA(tAlbedo, vWorldPos, triW, invTile)
+        : texture(tAlbedo, uvP);
+    albSample *= vColor;
+    // PAS de pow(2.2) : le baseColor est uploade en FORMAT sRGB -> le sampler GPU
+    // delinearise DEJA. Un pow(2.2) ici appliquait une 2e conversion gamma
+    // (double-gamma) -> couleurs sur-saturees / trop sombres. (Idem fix skin.)
+    vec3 albedo    = albSample.rgb;
+    float alpha    = albSample.a;
+    if (alpha < 0.01) discard;
+
+    vec3 orm = triplanarOn
+        ? NkTriplanarSampleRGB(tORM, vWorldPos, triW, invTile)
+        : texture(tORM, uvP).rgb;
+    float ao  = orm.r * uMat.ao;
+    float rog = orm.g * uObj.roughness;
+    float met = orm.b * uObj.metallic;
+
+    vec3 N;
+    if (triplanarOn) {
+        N = NkTriplanarNormalUDN(tNormal, vWorldPos, geomN, triW, invTile,
+                                  uMat.normalStrength);
+    } else {
+        vec3 nTs = texture(tNormal, uvP).xyz * 2.0 - 1.0;
+        nTs.xy  *= uMat.normalStrength;
+        // TBN ROBUSTE : un vTangent / vBitangent NUL (tangente colineaire a la normale,
+        // ou tangentes opposees qui s'annulent a l'interpolation) faisait
+        // normalize(0) = NaN -> N = NaN -> gros rectangle blanc via le bloom en mode
+        // d'affichage NORMAL. On reconstruit une base valide dans ce cas.
+        vec3 Tn = vTangent;
+        vec3 Bn = vBitangent;
+        if (dot(Tn, Tn) < 1e-12) {
+            vec3 fb = abs(geomN.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+            Tn = cross(fb, geomN);
+        }
+        Tn = normalize(Tn);
+        if (dot(Bn, Bn) < 1e-12)
+            Bn = cross(geomN, Tn);
+        Bn = normalize(Bn);
+        mat3 TBN = mat3(Tn, Bn, geomN);
+        N = normalize(TBN * nTs);
+    }
+
+    // Two-sided lighting : sur un pixel BACK-FACE (materiaux NoCull : panneaux,
+    // feuillage), la normale interpolee est celle de la face AVANT -> la face
+    // arriere etait eclairee (et ombree) comme l'avant. On retourne N pour que
+    // N.L coupe naturellement la lumiere du mauvais cote. Sans effet sur les
+    // objets fermes (back-faces cullees -> gl_FrontFacing toujours vrai).
+    if (!gl_FrontFacing)
+        N = -N;
+
+    // Geometric Specular AA (Kaplanyan/Tokuyoshi). Là où la normale N varie vite en
+    // écran (silhouettes / forte courbure des sphères), le reflet spéculaire sharp est
+    // sous-échantillonné -> il SCINTILLE au mouvement de la caméra (aliasing de shading,
+    // que ni MSAA ni FXAA ne corrigent). On élargit la roughness effective selon la
+    // variance de N (dérivées écran) -> reflet plus doux sur les zones à forte courbure
+    // -> plus de shimmer. Affecte le spéculaire direct (NDF) ET l'IBL prefilter via rog.
+    {
+        vec3  dNx    = dFdx(N);
+        vec3  dNy    = dFdy(N);
+        float geoVar = dot(dNx, dNx) + dot(dNy, dNy);
+        float kRough = min(2.0 * geoVar, 0.25);           // cap (KAPPA)
+        rog = min(sqrt(rog * rog + kRough), 1.0);
+    }
+
+    vec3 camPosForV = uCam.camPos.xyz;
+    if (uCam.reflectionFlags.x > 0.5) camPosForV.y = -camPosForV.y;
+    vec3 V    = normalize(camPosForV - vWorldPos);
+    vec3 F0   = mix(vec3(0.04), albedo, met);
+
+    // ── MOUILLAGE ────────────────────────────────────────────────────────
+    // Sebastien Lagarde, « Water drop 3b — Physically based wet surfaces »
+    // (2013), transcrit de math::NkApplyWetness (NKMath/NkWetnessMap.h) sous
+    // sa forme REDUITE. La reduction est algebrique et elle est PROUVEE par
+    // un temoin (w2) qui compare les deux formes sur une grille : Lagarde
+    // ecrit factor = lerp(1, 0.2, porosite), Diffuse *= lerp(1, factor, wet)
+    // et Gloss = lerp(1, Gloss, lerp(1, factor, 0.5 wet)) ; en rugosite et
+    // en developpant, tout ne depend que du produit porosite x wet :
+    //     albedo   *= 1 - 0.8 * wetK
+    //     rugosite *= 1 - 0.4 * wetK
+    // A wetK = 0 c'est l'IDENTITE EXACTE (x1.0), pas une approximation :
+    // une scene qui n'alimente pas ce champ rend exactement l'image d'avant.
+    //
+    // ⚠️ La rugosite recoit ceci APRES l'elargissement anti-scintillement
+    // (Kaplanyan/Tokuyoshi, plus haut) : le mouillage est une propriete de
+    // MATIERE, l'elargissement une correction de FREQUENCE d'echantillonnage.
+    // Les composer dans cet ordre est un choix, et il est ecrit ici.
+    {
+        float wetK   = clamp(uObj.wetParams.x, 0.0, 1.0);
+        float waterK = clamp(uObj.wetParams.y, 0.0, 1.0);
+        albedo *= (1.0 - 0.8 * wetK);
+        rog     = clamp(rog * (1.0 - 0.4 * wetK), 0.0, 1.0);
+        // Hors Lagarde, et il le dit : il juge le changement d'indice « pas
+        // assez visible en jeu ». waterK vaut 0 par defaut, donc F0 ne bouge
+        // pas. L'expression est celle du C++, pas une constante arrondie :
+        // Fresnel a incidence normale pour n = 1.33.
+        float nWater  = 1.33;
+        float f0Water = ((nWater - 1.0) / (nWater + 1.0)) * ((nWater - 1.0) / (nWater + 1.0));
+        F0 = mix(F0, vec3(f0Water), waterK);
+    }
+    // Base tangente PARTAGEE pour l'anisotropie (Gram-Schmidt sur N) : les
+    // tangentes de sommets si valides, repli stable sinon — meme robustesse
+    // que la normal map.
+    vec3 TnA = vTangent;
+    if (dot(TnA, TnA) < 1e-12)
+        TnA = abs(N.y) < 0.99 ? cross(vec3(0.0, 1.0, 0.0), N)
+                              : cross(vec3(1.0, 0.0, 0.0), N);
+    TnA = normalize(TnA - N * dot(TnA, N));
+    vec3 BnA = cross(N, TnA);
+
+    vec3 Lo = vec3(0.0);
+    // REFLET ACCUMULE A PART : sur une surface TRANSPARENTE, la fusion alpha
+    // atténue TOUT par l'opacite — y compris le reflet, alors qu'une vitre
+    // reflechit autant qu'elle transmet. On garde donc la part speculaire
+    // pour faire monter l'opacite finale la ou elle brille (« pourquoi la
+    // rugosite ne s'applique pas quand c'est transparent », Rihen, 12 aout).
+    vec3 LoSpec = vec3(0.0);
+    // RECEPTEUR D'OMBRE : on accumule EN PARALLELE l'eclairement qu'on aurait
+    // SANS ombre. Le rapport des deux donne exactement la part de lumiere
+    // perdue -- c'est-a-dire l'ombre -- sans avoir a rendre la scene deux fois.
+    // Additionner « 1 - csf » ne suffirait pas : une lumiere faible qui ombre
+    // beaucoup compterait autant qu'une lumiere forte qui ombre peu.
+    vec3 LoLit = vec3(0.0);
+
+    for (int i = 0; i < uLights.count && i < 32; i++) {
+        int   lt  = int(uLights.positions[i].w);
+        vec3  L;
+        float att = 1.0;
+        // Surfacique v2 : facteur de forme (-1 = pas une surfacique) et
+        // rugosite elargie par la taille apparente du panneau.
+        float areaE = -1.0;
+        float areaRog = rog;
+        // Speculaire LTC de la surfacique : calcule dans la branche area,
+        // consomme au contrib (remplace le point representatif si present).
+        vec3 areaLTCSpec = vec3(0.0);
+        float areaLTCOn = 0.0;
+
+        if (lt == 0) {
+            L   = normalize(-uLights.directions[i].xyz);
+            int cookieIdx = int(uLights.angles[i].w);
+            if (cookieIdx >= 0) {
+                vec3 fwd = normalize(uLights.directions[i].xyz);
+                vec3 worldUp = abs(fwd.y) > 0.99 ? vec3(1, 0, 0) : vec3(0, 1, 0);
+                vec3 right = normalize(cross(worldUp, fwd));
+                vec3 upL   = normalize(cross(fwd, right));
+                float tile = max(uLights.directions[i].w, 0.01);
+                float u = fract(dot(vWorldPos, right) / tile);
+                float v = fract(dot(vWorldPos, upL)   / tile);
+                att *= SampleLight3DCookie(cookieIdx, vec2(u, v));
+            }
+        } else {
+            vec3 d = uLights.positions[i].xyz - vWorldPos;
+            float dist = length(d);
+            L   = normalize(d);
+            float range = max(uLights.directions[i].w, 0.001);
+            if (uLights.extras[i].x > 0.5) {
+                // LOI PHYSIQUE (UE/Blender) : 1/d^2, FENETRE par la portee.
+                // La luminosite a une distance donnee ne depend PAS de la
+                // portee -- elle ne fait que couper en douceur. C'est ce qui
+                // rend une unite d'intensite utilisable : la loi heritee
+                // eclaircissait TOUTE la scene des qu'on allongeait la portee
+                // (constate par Rihen en comparant a Blender). Le max(d, 1cm)
+                // borne l'explosion au contact de la source.
+                float dm = max(dist, 0.01);
+                float w  = clamp(1.0 - pow(dist / range, 4.0), 0.0, 1.0);
+                att = (w * w) / (dm * dm);
+            } else {
+                // LOI HERITEE : celle que toutes les scenes existantes ont
+                // reglee a l'oeil. Defaut inchange (decision de Rihen).
+                att = max(1.0 - dist / range, 0.0);
+                att = att * att;
+            }
+            if (lt == 1) {
+                int cookieIdx = int(uLights.angles[i].w);
+                if (cookieIdx >= 0) {
+                    att *= SampleLight3DCubeCookie(cookieIdx, normalize(-L));
+                }
+            }
+            if (lt == 2) {
+                float th       = dot(L, normalize(-uLights.directions[i].xyz));
+                float cosInner = uLights.angles[i].x;
+                float cosOuter = uLights.angles[i].y;
+                att *= clamp((th - cosOuter) / (cosInner - cosOuter + 1e-4), 0.0, 1.0);
+
+                int cookieIdx = int(uLights.angles[i].w);
+                if (cookieIdx >= 0) {
+                    vec3 fwd = normalize(uLights.directions[i].xyz);
+                    vec3 worldUp = abs(fwd.y) > 0.99 ? vec3(1, 0, 0) : vec3(0, 1, 0);
+                    vec3 right = normalize(cross(worldUp, fwd));
+                    vec3 upL   = normalize(cross(fwd, right));
+                    vec3 toFrag = vWorldPos - uLights.positions[i].xyz;
+                    float fwdDist = dot(toFrag, fwd);
+                    if (fwdDist > 0.001) {
+                        float sinO = sqrt(max(1.0 - cosOuter*cosOuter, 0.0));
+                        float halfWidth = (sinO / max(cosOuter, 1e-3)) * fwdDist;
+                        if (halfWidth > 1e-3) {
+                            float u = dot(toFrag, right) / (2.0 * halfWidth) + 0.5;
+                            float v = dot(toFrag, upL)   / (2.0 * halfWidth) + 0.5;
+                            att *= SampleLight3DCookie(cookieIdx, vec2(u, v));
+                        }
+                    }
+                }
+            }
+            if (lt == 3) {
+                // ── SURFACIQUE V2 (10 aout) : LES DIMENSIONS AGISSENT ────────────
+                // La v1 traitait le panneau comme un point a cosinus : largeur et
+                // hauteur, pourtant televersees (extras[i].yz), ne changeaient
+                // RIEN (constate par Rihen face a Blender).
+                //
+                // DIFFUS EXACT : facteur de forme d'un rectangle lambertien,
+                // integre ARETE PAR ARETE (Baum 1989 — la valeur vers laquelle
+                // converge le diffus des LTC). L'inverse carre ET le cosinus en
+                // DECOULENT : aucune attenuation ponctuelle a ajouter, seule la
+                // fenetre de portee coupe encore.
+                //
+                // SPECULAIRE : POINT REPRESENTATIF (Karis, UE4) — le reflet vise
+                // le point du rectangle le plus proche du rayon reflechi, et la
+                // rugosite s'elargit avec la taille apparente de la source. Les
+                // vraies tables LTC restent la suite naturelle ; ce chemin-ci en
+                // donne deja le comportement (reflet ETIRE par le panneau).
+                vec3 fwdA = normalize(uLights.directions[i].xyz);
+                vec3 upW = abs(fwdA.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
+                vec3 rightA = normalize(cross(upW, fwdA));
+                vec3 upA = normalize(cross(fwdA, rightA));
+                float hw = max(uLights.extras[i].y, 0.01) * 0.5;
+                float hh = max(uLights.extras[i].z, 0.01) * 0.5;
+                vec3 Pl = uLights.positions[i].xyz;
+                // UN SEUL COTE : derriere le panneau, rien.
+                if (dot(fwdA, vWorldPos - Pl) <= 0.0) {
+                    att = 0.0;
+                } else {
+                    // Coins NON normalises d'abord (le LTC en a besoin tels
+                    // quels), puis directions unitaires pour le facteur de forme.
+                    vec3 c0 = Pl - rightA * hw - upA * hh - vWorldPos;
+                    vec3 c1 = Pl + rightA * hw - upA * hh - vWorldPos;
+                    vec3 c2 = Pl + rightA * hw + upA * hh - vWorldPos;
+                    vec3 c3 = Pl - rightA * hw + upA * hh - vWorldPos;
+                    vec3 q0 = normalize(c0);
+                    vec3 q1 = normalize(c1);
+                    vec3 q2 = normalize(c2);
+                    vec3 q3 = normalize(c3);
+                    float E = 0.0;
+                    E += acos(clamp(dot(q0, q1), -1.0, 1.0)) * dot(normalize(cross(q0, q1)), N);
+                    E += acos(clamp(dot(q1, q2), -1.0, 1.0)) * dot(normalize(cross(q1, q2)), N);
+                    E += acos(clamp(dot(q2, q3), -1.0, 1.0)) * dot(normalize(cross(q2, q3)), N);
+                    E += acos(clamp(dot(q3, q0), -1.0, 1.0)) * dot(normalize(cross(q3, q0)), N);
+                    // SIGNE : avec cet ordre de sommets (−−, +−, ++, −+), le
+                    // parcours est HORAIRE vu du recepteur — la somme sort
+                    // NEGATIVE quand le panneau eclaire de face (derive sur le
+                    // cas canonique : panneau au-dessus, sol en dessous ; c'etait
+                    // le « calcule a l'inverse » constate par Rihen). On la nie.
+                    E = max(-E * 0.159154943, 0.0); // 1/(2π)
+                    // La fenetre de portee reste le seul couperet (deja calculee
+                    // dans `att` selon la loi) ; le facteur de forme REMPLACE la
+                    // partie geometrique. On divise par NdL*(1/π) plus bas via le
+                    // chemin partage : on compense ici pour que le diffus varie
+                    // exactement comme E (le shared multiplie par NdL/π).
+                    // -> areaE porte E, consomme au moment du contrib.
+                    att *= 1.0; // la fenetre de portee de la loi reste dans att
+                    areaE = E;
+                    // Point representatif pour le reflet.
+                    vec3 Rr = reflect(-V, N);
+                    float dn = dot(fwdA, Rr);
+                    vec3 Ph = Pl;
+                    if (abs(dn) > 1e-4) {
+                        float tHit = dot(Pl - vWorldPos, fwdA) / dn;
+                        if (tHit > 0.0) {
+                            vec3 hp = vWorldPos + Rr * tHit;
+                            float lu = clamp(dot(hp - Pl, rightA), -hw, hw);
+                            float lv = clamp(dot(hp - Pl, upA), -hh, hh);
+                            Ph = Pl + rightA * lu + upA * lv;
+                        }
+                    }
+                    L = normalize(Ph - vWorldPos);
+                    // Rugosite elargie par la taille apparente (normalisation
+                    // d'energie approchee de Karis) : un panneau large etire et
+                    // adoucit son reflet. Ne sert plus que de REPLI quand les
+                    // tables LTC manquent.
+                    float dRep = max(length(Ph - vWorldPos), 1e-3);
+                    areaRog = clamp(rog + (hw + hh) * 0.25 / dRep, rog, 1.0);
+                    // ── SPECULAIRE LTC (Heitz 2016) ─────────────────────────
+                    // La matrice M^-1 (ajustee sur GGX par rugosite et
+                    // incidence) transforme le rectangle dans l'espace ou le
+                    // lobe devient un cosinus : l'integrale d'arete y est
+                    // EXACTE. Longueur du vecteur somme + table d'horizon =
+                    // clipping spherique, sans decouper le polygone.
+                    if (uCam.viewOpts.z > 0.5) {
+                        float ndv = clamp(dot(N, V), 0.0, 1.0);
+                        // 64 texels : echantillonner au CENTRE des texels.
+                        vec2 ltcUV = vec2(rog, sqrt(1.0 - ndv));
+                        ltcUV = ltcUV * 0.984375 + vec2(0.0078125, 0.0078125);
+                        vec4 t1 = texture(tLTC1, ltcUV);
+                        vec4 t2 = texture(tLTC2, ltcUV);
+                        // M^-1 developpee en COLONNES (aucune mat3 : le produit
+                        // matrice*vecteur declare si profond dans les blocs
+                        // echappe au scan du generateur HLSL et sortait en `*`
+                        // composante a composante -> X3020, pipeline PBR mort,
+                        // scene noire — vecu ce soir).
+                        vec3 mc0 = vec3(t1.x, 0.0, t1.y);
+                        vec3 mc1 = vec3(0.0, 1.0, 0.0);
+                        vec3 mc2 = vec3(t1.z, 0.0, t1.w);
+                        // Base orthonormee autour de N alignee sur la vue,
+                        // en dots explicites (pas de transpose()).
+                        vec3 B1 = normalize(V - N * dot(V, N));
+                        vec3 B2 = cross(N, B1);
+                        vec3 tc0 = vec3(dot(c0, B1), dot(c0, B2), dot(c0, N));
+                        vec3 tc1 = vec3(dot(c1, B1), dot(c1, B2), dot(c1, N));
+                        vec3 tc2 = vec3(dot(c2, B1), dot(c2, B2), dot(c2, N));
+                        vec3 tc3 = vec3(dot(c3, B1), dot(c3, B2), dot(c3, N));
+                        vec3 l0 = normalize(mc0 * tc0.x + mc1 * tc0.y + mc2 * tc0.z);
+                        vec3 l1 = normalize(mc0 * tc1.x + mc1 * tc1.y + mc2 * tc1.z);
+                        vec3 l2 = normalize(mc0 * tc2.x + mc1 * tc2.y + mc2 * tc2.z);
+                        vec3 l3 = normalize(mc0 * tc3.x + mc1 * tc3.y + mc2 * tc3.z);
+                        // MEME SENS DE PARCOURS que le facteur de forme : cet
+                        // ordre de coins est horaire vu du recepteur, la somme
+                        // sort tournee vers -Z ; on prend la norme, le signe
+                        // n'importe plus (t2.w spherise l'horizon).
+                        vec3 vsum = NkLTCEdge(l0, l1);
+                        vsum += NkLTCEdge(l1, l2);
+                        vsum += NkLTCEdge(l2, l3);
+                        vsum += NkLTCEdge(l3, l0);
+                        float lenV = length(vsum);
+                        float zH = vsum.z / max(lenV, 1e-7);
+                        // Le parcours horaire inverse aussi z : le remettre du
+                        // cote du demi-espace eclaire avant la table d'horizon.
+                        zH = -zH;
+                        vec2 hUV = vec2(zH * 0.5 + 0.5, lenV);
+                        hUV = hUV * 0.984375 + vec2(0.0078125, 0.0078125);
+                        float sphere = texture(tLTC2, hUV).w;
+                        float sum = lenV * sphere;
+                        // Norme GGX + Fresnel integres par la table.
+                        areaLTCSpec = sum * (F0 * t2.x + (vec3(1.0) - F0) * t2.y);
+                        areaLTCOn = 1.0;
+                    }
+                }
+            }
+        }
+
+        float csf = 1.0;
+        if (uLights.angles[i].z > 0.5 && uObj.shadowOverrides.x > 0.5) {
+            csf = SampleLightShadowEx(i, vWorldPos, N, L, uObj.shadowOverrides.z);
+        }
+        vec3 H    = normalize(V + L);
+        float NdL = max(dot(N, L), 0.0);
+        vec3 rad  = uLights.colors[i].rgb * uLights.colors[i].w * att;
+
+        // Surfacique v2 : la rugosite du reflet s'elargit avec le panneau.
+        float rogL = (areaE >= 0.0) ? areaRog : rog;
+        float NDF = D_GGX(N, H, rogL);
+        float G   = G_Smith(N, V, L, rogL);
+        vec3  F   = F_Schlick(max(dot(H,V),0.0), F0);
+        vec3 spec = NDF*G*F / (4.0*max(dot(N,V),0.0)*NdL+1e-4);
+        // ── ANISOTROPIE (GGX elliptique, parametrage Filament) ──────────
+        // at/ab etirent le lobe le long de la tangente ou de la bitangente ;
+        // 0 = isotrope (le D classique reste alors seul juge).
+        if (abs(uMat.anisotropy) > 1e-3) {
+            float ra = rogL * rogL;
+            float at = max(ra * (1.0 + uMat.anisotropy), 1e-4);
+            float ab = max(ra * (1.0 - uMat.anisotropy), 1e-4);
+            float ToH = dot(TnA, H);
+            float BoH = dot(BnA, H);
+            float NdH2 = max(dot(N, H), 0.0);
+            float d2 = ToH * ToH / (at * at) + BoH * BoH / (ab * ab) + NdH2 * NdH2;
+            float Da = 1.0 / (PI * at * ab * max(d2 * d2, 1e-7));
+            spec = Da * G * F / (4.0 * max(dot(N, V), 0.0) * NdL + 1e-4);
+        }
+        // ── SHEEN (distribution Charlie + visibilite de Neubelt) ────────
+        // Le voile textile : retroreflexion douce aux bords, ajoutee au lobe.
+        if (uMat.sheen > 1e-3) {
+            float NdHs = max(dot(N, H), 0.0);
+            float invA = 1.0 / max(rogL, 0.05);
+            float Dc = (2.0 + invA) * pow(max(1.0 - NdHs * NdHs, 0.0), invA * 0.5)
+                       / (2.0 * PI);
+            float NdVs = max(dot(N, V), 1e-4);
+            float Vn = 1.0 / (4.0 * (NdL + NdVs - NdL * NdVs) + 1e-4);
+            spec += vec3(uMat.sheen) * Dc * Vn;
+        }
+        vec3 kD   = (1.0-F)*(1.0-met);
+        vec3 contrib;
+        // Energie effective : pour la surfacique, l'irradiance equivalente est
+        // π·Le·F — le facteur de forme F porte DEJA le cosinus et l'inverse
+        // carre (integres arete par arete). La diffusion sous la surface
+        // ci-dessous s'en nourrit aussi : une matiere translucide devant un
+        // panneau doit briller comme devant n'importe quelle source.
+        vec3 radEff = rad;
+        if (areaE >= 0.0) {
+            radEff = uLights.colors[i].rgb * uLights.colors[i].w * att * (PI * areaE);
+            // PAS de NdL sur le diffus (le facteur de forme le contient) :
+            // c'est ce qui permet a un grand panneau d'eclairer une face
+            // rasante, comme dans Blender. Le reflet garde son NdL (lobe).
+            if (areaLTCOn > 0.5) {
+                // LTC : l'integrale porte deja cosinus et geometrie — la
+                // radiance seule la module (meme unite que le diffus, dont
+                // le facteur de forme est l'integrale LTC identite).
+                vec3 radL = uLights.colors[i].rgb * uLights.colors[i].w * att;
+                contrib = kD * albedo / PI * radEff + radL * areaLTCSpec;
+            } else {
+                contrib = kD * albedo / PI * radEff + spec * radEff * NdL;
+            }
+        } else {
+            contrib = (kD*albedo/PI + spec) * rad * NdL;
+        }
+        // DIFFUSION SOUS LA SURFACE, ICI et plus dans une boucle a part
+        // (2026-08-09) : l'ancienne boucle recalculait L mais ni att ni
+        // l'ombre, et ignorait le 1/PI du diffus -- une lampe eclairait la
+        // diffusion a PLEINE intensite quelle que soit la distance, et le
+        // cube partait en supernova des 0.5 (constate par capture d'agent).
+        // Dans la boucle, `rad` porte deja attenuation et couleur, `csf`
+        // l'ombre : UNE seule loi d'attenuation, pas deux qui divergent.
+        if (uMat.subsurface > 0.0) {
+            float wrap = max(dot(N, L) + uMat.subsurface, 0.0) / (1.0 + uMat.subsurface);
+            contrib += uMat.subsurfaceColor.rgb * (wrap * uMat.subsurface / PI) * radEff;
+        }
+        Lo    += csf * contrib;
+        LoLit += contrib; // le meme eclairement, ombres ignorees
+        // Part speculaire seule (meme facteurs que ci-dessus, sans le diffus).
+        if (areaE >= 0.0) {
+            if (areaLTCOn > 0.5) {
+                vec3 radLs = uLights.colors[i].rgb * uLights.colors[i].w * att;
+                LoSpec += csf * radLs * areaLTCSpec;
+            } else {
+                LoSpec += csf * spec * radEff * NdL;
+            }
+        } else {
+            LoSpec += csf * spec * rad * NdL;
+        }
+    }
+
+    vec3 Fi   = F_SchlickR(max(dot(N,V),0.0), F0, rog);
+    vec3 kDi  = (1.0-Fi)*(1.0-met);
+    vec3 R    = reflect(-V, N);
+    // SANS ENVIRONNEMENT CHARGE, L'AMBIANCE EST UNIFORME (uCam.iblColor.w).
+    // On echantillonnait les cubemaps PAR LA NORMALE meme quand aucun monde
+    // n'etait charge : leur contenu par defaut n'etant pas uniforme, trois faces
+    // d'un cube ressortaient plus claires que les trois autres, TOUJOURS les
+    // memes quelle que soit la vue -- alors que Blender, avec un monde de
+    // couleur unie, donne un aplat parfait.
+    float hasEnv = uCam.iblColor.w;
+    vec3 irr  = mix(vec3(1.0), texture(tEnvIrradiance, N).rgb, hasEnv);
+    vec3 prefMirror = texture(tSkyEnvCube, R).rgb;
+    vec3 prefRough  = textureLod(tEnvPrefilter, R, rog*4.0).rgb;
+    float mirrorMix = 1.0 - smoothstep(0.05, 0.50, rog);
+    vec3 pref       = mix(vec3(1.0), mix(prefRough, prefMirror, mirrorMix), hasEnv);
+    vec2 brdf       = texture(tBRDFLUT, vec2(max(dot(N,V),0.0), rog)).rg;
+    // GI à un rebond + AO en UN SEUL balayage de cônes : la grille de voxels
+    // porte rgb = radiance réémise et a = opacité (cf. Include/NkVoxelAO.glsli),
+    // donc l'AO est un produit dérivé du GI et ne coûte rien de plus.
+    vec4  voxGI = NkComputeVoxelGI(vWorldPos, N);
+    float voxAO = voxGI.w;
+    // L'ambiance porte une TEINTE (World Color de Blender) : blanc = neutre,
+    // donc le comportement d'avant tant qu'on n'y touche pas.
+    vec3 amb  = (kDi*irr*albedo + pref*(Fi*brdf.x+brdf.y)) * ao * voxAO
+              * uCam.iblStrength * uCam.iblColor.rgb;
+    // L'indirect S'AJOUTE à l'ambiant IBL au lieu de le remplacer : l'IBL porte
+    // la lumière du ciel, le GI porte le rebond de la géométrie proche (c'est lui
+    // qui fait qu'un mur rouge éclairé teinte le sol voisin). Aucun uniform
+    // d'intensité : le réglage est appliqué CÔTÉ CPU à l'injection (radiance
+    // nulle = GI éteint), ce qui évite un binding de plus — les registres DX
+    // sont déjà contraints. Sans occluder injecté, voxGI.xyz vaut 0 et ce terme
+    // disparaît : le rendu par défaut est strictement inchangé.
+    amb += kDi * albedo * voxGI.xyz * ao * uCam.iblStrength;
+
+    vec3 ccContrib = vec3(0.0);
+    if (uMat.clearcoat > 0.0) {
+        float ccR = uMat.clearcoatRough;
+        vec3  Fcc = F_Schlick(max(dot(N,V),0.0), vec3(0.04)) * uMat.clearcoat;
+        // SANS ENVIRONNEMENT CHARGE, MEME REGLE QUE L'AMBIANT (hasEnv) : le
+        // vernis reflechit une ambiance UNIFORME ponderee par l'intensite IBL,
+        // au lieu d'echantillonner un prefilter au contenu indefini. Sans ce
+        // repli, « Vernis » ne faisait RIEN dans une scene sans HDRI.
+        vec3  prefCC = mix(vec3(uCam.iblStrength) * uCam.iblColor.rgb,
+                           textureLod(tEnvPrefilter, R, ccR*4.0).rgb, hasEnv);
+        vec2  brdfCC = texture(tBRDFLUT, vec2(max(dot(N,V),0.0), ccR)).rg;
+        ccContrib = prefCC * (Fcc * brdfCC.x + brdfCC.y);
+    }
+
+    // (la diffusion sous la surface est accumulee DANS la boucle de lumieres,
+    // avec attenuation et ombre — cf. le commentaire dans la boucle.)
+
+    // ── EMISSION : LA TEINTE EMET, LA TEXTURE LA MODULE ──────────────────
+    // Elle lisait `uObj.emissiveStrength`, que le C++ met DELIBEREMENT a zero
+    // (« emissive via materiau (v1) », NkRender3D) : l'emission etait donc
+    // toujours NOIRE, couleur et intensite confondues, alors que le panneau
+    // proposait les deux. Les valeurs vivent dans le bloc MATERIAU.
+    //
+    // La teinte multiplie la texture, dont le neutre est le BLANC : sans carte
+    // emissive, la couleur choisie emet seule ; avec une carte, elle la module.
+    // C'est ce que promet le panneau, et ce que fait Blender.
+    vec3 emissive = uMat.emissive.rgb * texture(tEmissive, uvP).rgb * uMat.emissiveStrength;
+
+    vec3 color = amb + Lo + ccContrib + emissive;
+    // Mode SOLID / UNLIT (façon Blender Solid & Wireframe) : couleur plate = albedo*tint,
+    // révélée par un "phare caméra" (N·V) pour voir la FORME, SANS lumières de scène /
+    // ombres / IBL. Facteur borné (<1) -> reste sous le seuil de bloom (pas de halo).
+    // Canaux d'affichage viewport (façon Blender / DCC) : 0=RENDERED (PBR ci-dessus),
+    // 1=SOLID/matcap, 2=NORMAL, 3=UV, 4=AO. Tous sans lumières de scène (débogage).
+    if (uCam.viewMode > 0.5) {
+        if (uCam.viewMode < 1.5) {
+            // 1 — SOLID / WIREFRAME : MATCAP en ESPACE VUE, SANS lumieres de scene,
+            // sans ombres, sans IBL. L'eclairage est PEINT dans la texture : c'est ce
+            // qui rend le mode lisible quel que soit l'eclairage reel de la scene.
+            // NB : mat3(mat4) INTERDIT en HLSL (X3014) -> on reconstruit colonne par colonne.
+            mat3  vRot = mat3(uCam.view[0].xyz, uCam.view[1].xyz, uCam.view[2].xyz);
+            vec3  vn   = normalize(vRot * geomN);                 // normale en espace vue
+            // Rayon borne a 0.985 : au rasage (|vn.xy| -> 1) on echantillonnait le
+            // BORD exact du disque, la ou le filtrage melange boule et marge —
+            // l'autre moitie de la « ligne sombre » signalee. On reste a l'interieur.
+            vec2  vxy  = vn.xy;
+            float vl   = length(vxy);
+            if (vl > 0.985) vxy *= 0.985 / vl;
+            vec2  ball = clamp(vxy * 0.5 + 0.5, 0.0, 1.0);        // disque unite = la boule
+
+            // Atlas 6x5 de tuiles de 128 px, 4 px de marge (voir NkMatcapLibrary).
+            // La tuile est calculee ICI plutot que passee en uniformes : la geometrie
+            // de l'atlas est une constante partagee des deux cotes, un uniforme de plus
+            // n'apporterait rien qu'un risque de desynchronisation.
+            // La marge n'est pas cosmetique : sans elle le filtrage bilineaire au bord
+            // d'une tuile irait chercher des texels de la tuile VOISINE et dessinerait
+            // un lisere de la mauvaise matcap sur la silhouette.
+            // NB : pas de mod() ici — il se traduit mal vers HLSL (fmod a une semantique
+            // differente sur les negatifs). La forme id - 6*floor(id/6) est portable.
+            float id    = clamp(uCam.matcapId, 0.0, 33.0);
+            float cy    = floor(id / 6.0);
+            float cx    = id - 6.0 * cy;
+            vec2  tile  = vec2(128.0 / 768.0, 128.0 / 768.0);
+            vec2  inner = vec2(120.0 / 768.0, 120.0 / 768.0);
+            vec2  org   = vec2(cx, cy) * tile + vec2(4.0 / 768.0, 4.0 / 768.0);
+            // viewOpts.x = 1 : une matcap personnalisee a remplace l'atlas -> on
+            // echantillonne la texture entiere, pas une tuile.
+            vec2  muv   = (uCam.viewOpts.x > 0.5) ? ball : (org + ball * inner);
+            color = texture(tMatcap, muv).rgb * uObj.tint.rgb;
+        } else if (uCam.viewMode < 2.5) {
+            // 2 — NORMAL : normale MONDE (avec normal map) encodée RGB [0,1].
+            color = N * 0.5 + vec3(0.5);
+        } else if (uCam.viewMode < 3.5) {
+            // 3 — UV : coordonnées de texture (R=u, G=v) -> damier de contrôle du mapping.
+            color = vec3(fract(vUV), 0.0);
+        } else {
+            // 4 — AO : occlusion ambiante (ORM.r*aoStrength × Voxel AO) en niveaux de gris.
+            color = vec3(clamp(ao * voxAO, 0.0, 1.0));
+        }
+    }
+    // ── BROUILLARD ───────────────────────────────────────────────────────────
+    // Applique EN DERNIER, sur la couleur finale : le brouillard est ce qui
+    // s'interpose entre l'objet et l'oeil, il recouvre donc tout le reste --
+    // eclairage, reflets, emissif. Deux lois au choix, comme partout ailleurs :
+    // LINEAIRE (debut/fin nets, pratique pour cadrer un decor) et EXPONENTIEL
+    // (plus proche de la realite, l'attenuation suit la distance traversee).
+    // Les champs existaient dans le contexte de scene depuis toujours, mais
+    // AUCUNE passe ne les lisait : les regler n'avait aucun effet (Rihen).
+    if (uCam.fogParams.x > 0.5) {
+        float dist = length(uCam.camPos.xyz - vWorldPos);
+        float f;
+        if (uCam.fogParams.w > 0.5) {
+            // exponentiel au carre : la transition reste douce de pres
+            float d = dist * uCam.fogColor.w;
+            f = 1.0 - exp(-d * d);
+        } else {
+            float fstart = uCam.fogParams.y;
+            float fend   = max(uCam.fogParams.z, fstart + 0.001);
+            f = clamp((dist - fstart) / (fend - fstart), 0.0, 1.0);
+        }
+        // ── NAPPE AU SOL, SOUFFLEE COMME UNE FUMEE (Rihen) ───────────────
+        // Epaisseur nulle : le brouillard ne depend que de la distance, comme
+        // avant -- rien ne change pour les scenes existantes. Sinon la nappe
+        // est DENSE au niveau de sa base et s'eclaircit en montant ; le
+        // souffle module sa densite par un bruit qui DERIVE, exactement comme
+        // la couche nuageuse, ce qui donne la fumee qui avance au sol.
+        float thick = uCam.fogHeight.y;
+        if (thick > 0.001) {
+            float hRel = (vWorldPos.y - uCam.fogHeight.x) / thick;
+            // Fondu DOUX du bas vers le haut : une coupure nette dessinerait
+            // une ligne d'horizon artificielle a hauteur constante.
+            float hFall = 1.0 - smoothstep(0.0, 1.0, clamp(hRel, 0.0, 1.0));
+            float wind = uCam.fogHeight.z;
+            if (wind > 0.001) {
+                // Bruit de valeur a deux echelles, decale par le temps : la
+                // nappe respire au lieu de couler d'un bloc.
+                vec2 q = vWorldPos.xz * 0.06 + vec2(uCam.fogHeight.w, uCam.fogHeight.w * 0.6);
+                float n = sin(q.x) * cos(q.y * 1.3)
+                        + 0.5 * sin(q.x * 2.7 + 1.3) * cos(q.y * 2.1 - 0.7);
+                // n dans [-1.5, 1.5] -> [0, 1], puis autour de 1 selon la force
+                float nn = clamp(n * 0.3333 + 0.5, 0.0, 1.0);
+                hFall *= mix(1.0, nn * 1.6, clamp(wind, 0.0, 1.0));
+            }
+            f *= clamp(hFall, 0.0, 1.0);
+        }
+        color = mix(color, uCam.fogColor.rgb, clamp(f, 0.0, 1.0));
+    }
+    // ── GARDE-FOU NaN / Inf (dernier rempart) ────────────────────────────────
+    // Un seul pixel NaN ecrit dans la cible HDR contamine toute la chaine de BLOOM
+    // (chaque down/up moyenne ses taps : le NaN se propage) et ressort en un gros
+    // RECTANGLE BLANC aligne ecran qui masque la scene, sur TOUS les backends.
+    // Test portable sans isnan() : toute comparaison avec NaN est fausse, donc
+    // !(x >= 0.0 || x <= 0.0) n'est vrai que pour NaN. On borne aussi les Inf.
+    if (!(color.x >= 0.0 || color.x <= 0.0)) color.x = 0.0;
+    if (!(color.y >= 0.0 || color.y <= 0.0)) color.y = 0.0;
+    if (!(color.z >= 0.0 || color.z <= 0.0)) color.z = 0.0;
+    color = clamp(color, vec3(0.0), vec3(65504.0));
+
+    // ── RECEPTEUR D'OMBRE (shadow catcher) ───────────────────────────────────
+    // La surface ne se peint PAS : elle ne rend que l'OMBRE qu'elle recoit.
+    // C'est ce qui permet de detourer un objet sur fond transparent sans qu'il
+    // paraisse flotter -- couper le sol emporterait son ombre, puisqu'elle est
+    // projetee dessus.
+    //
+    // La couverture vaut la part de lumiere PERDUE : 1 - eclaire/nonEclaire.
+    // Elle se mesure sur la LUMINANCE, pas par canal, sinon une ombre coloree
+    // donnerait trois couvertures differentes pour un meme point.
+    // La couleur sortie est NOIRE : c'est l'alpha qui porte l'ombre, donc elle
+    // se compose correctement sur n'importe quel fond, clair comme sombre.
+    if (uObj.shadowOverrides.w > 0.5) {
+        // L'AMBIANTE COMPTE DES DEUX COTES. Ne mesurer que la lumiere DIRECTE
+        // donnait une couverture de 1 dans toute l'ombre -- une tache noire
+        // pleine (constate a l'essai) : l'ombre bloque bien 100 % du direct,
+        // mais la zone ombree recoit encore le ciel et les rebonds. C'est
+        // l'ASSOMBRISSEMENT REELLEMENT VU qu'il faut mesurer, ambiante
+        // comprise ; sinon on peint un trou la ou l'oeil voit une nuance.
+        float lLit = dot(LoLit + amb, vec3(0.2126, 0.7152, 0.0722));
+        float lSha = dot(Lo    + amb, vec3(0.2126, 0.7152, 0.0722));
+        // Surface qu'aucune lumiere n'atteint : rien a dire, donc rien a
+        // peindre -- sans cette garde on diviserait par zero et le sol
+        // deviendrait opaque partout.
+        float cover = (lLit > 1e-5) ? clamp(1.0 - lSha / lLit, 0.0, 1.0) : 0.0;
+        fragColor = vec4(0.0, 0.0, 0.0, cover);
+        return;
+    }
+    // L'ALPHA SORT VRAIMENT : c'est lui que la fusion utilise (src alpha), pas
+    // le champ de l'UBO. Ecrire 1.0 en dur rendait TOUTE la file transparente
+    // opaque — le curseur « Opacite » du panneau bougeait, le routage vers la
+    // file transparente se faisait, la fusion s'appliquait... sur un alpha de
+    // 1 (« l'opacite n'a pas d'effet », Rihen, 11 aout). `alpha` porte deja
+    // la texture x uMat.albedo.a x vColor.a (dont dc.alpha).
+    // L'OPACITE MONTE AVEC LE REFLET : un objet transparent garde ses
+    // hautes lumieres (et donc sa rugosite lisible), au lieu de les voir
+    // fondre avec le reste. Sans effet sur un opaque (alpha deja a 1).
+    float specCov = clamp(max(LoSpec.r, max(LoSpec.g, LoSpec.b)), 0.0, 1.0);
+    float aOut    = clamp(alpha + (1.0 - alpha) * specCov, 0.0, 1.0);
+    fragColor  = vec4(color, aOut);
+}

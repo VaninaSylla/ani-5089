@@ -1,0 +1,126 @@
+// pp_tonemap.frag.nksl — NKRenderer — PostProcess Tonemap FS (VRAI dialecte NkSL)
+// Traduit de PP_Tonemap/VK/pp_tonemap.frag.vk.glsl. HDR + SSAO + Bloom + ACES + gamma
+// + saturation + LUT 3D + vignette. push_constant 48 octets (3×vec4) partagé avec le VS.
+
+@location(0) in  vec2 vUV;
+@location(0) out vec4 oColor;
+
+@binding(set=0, binding=0) uniform sampler2D uHDR;
+@binding(set=0, binding=1) uniform sampler2D uBloom;
+@binding(set=0, binding=2) uniform sampler2D uSSAO;
+@binding(set=0, binding=3) uniform sampler3D uColorLUT;
+// Auto-exposure : cible 1x1 écrite par la passe PP_AutoExposure — luminance moyenne
+// logarithmique de la scène, déjà lissée temporellement. Valeur utile dans .r.
+@binding(set=0, binding=4) uniform sampler2D uAvgLuma;
+
+layout(push_constant) uniform PC {
+    vec4 p0;   // (exposure, gamma, vignetteIntens, saturation)
+    vec4 p1;   // (bloomStrength, lutStrength, yFlipUV, lutSize)
+    vec4 p2;   // (autoExpStrength, autoExpKey, bloomYFlip, hdrClamp)
+    vec4 p3;   // auto-exposure : (exposureMin, exposureMax, _, _)
+} pc;
+
+vec3 ACESFilm(vec3 x) {
+    const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
+    return clamp((x*(a*x+b)) / (x*(c*x+d)+e), 0.0, 1.0);
+}
+
+@stage(fragment)
+@entry
+void main() {
+    float exposure       = pc.p0.x;
+    float gamma          = pc.p0.y;
+    float vignetteIntens = pc.p0.z;
+    float saturation     = pc.p0.w;
+    float bloomStr       = pc.p1.x;
+    float autoExpStr     = pc.p2.x;
+    float autoExpKey     = pc.p2.y;
+    // bloomYFlip (pc.p2.z) : sur DX le BLOOM est stocké Y-UP (chaîne down/up via VS
+    // plein écran) alors que le HDR est Y-DOWN (VS 3D Y-négaté) → le tonemap doit
+    // échantillonner uBloom avec V INVERSÉ relativement au HDR, sinon le glow apparaît
+    // en MIROIR vertical ("ghost"/croissant sous la source). VK/GL : bloomYFlip=0.
+    // IMPORTANT : la SSAO est ALIGNÉE avec le HDR (même orientation, vérifié par dump RT)
+    // → on l'échantillonne à vUV, PAS bloomUV. La flipper assombrissait l'AO au mauvais
+    // endroit → objets quasi invisibles (régression). Seul uBloom utilise bloomUV.
+    float bloomYFlip     = pc.p2.z;
+    vec2  bloomUV        = vec2(vUV.x, mix(vUV.y, 1.0 - vUV.y, bloomYFlip));
+
+    // Auto-exposure V1 : luminance moyenne RÉELLE de la scène, mesurée par la passe
+    // PP_AutoExposure (moyenne logarithmique de 256 échantillons + adaptation
+    // temporelle) et lue dans une cible 1x1.
+    // La V0 échantillonnait UN SEUL pixel — le centre du RT de bloom — comme proxy du
+    // niveau de la scène : une source vive au centre écrasait l'exposition de toute
+    // l'image, et une scène sombre hors du centre restait sous-exposée.
+    if (autoExpStr > 0.001) {
+        float avgLuma = texture(uAvgLuma, vec2(0.5)).r;
+        if (avgLuma > 0.0) {
+            float autoExp = autoExpKey / max(avgLuma, 0.0001);
+            autoExp = clamp(autoExp, pc.p3.x, pc.p3.y);
+            exposure = mix(exposure, autoExp, clamp(autoExpStr, 0.0, 1.0));
+        }
+    }
+
+    // Garde-fou HDR (pc.p2.w) : borne max des valeurs HDR. 0 = desactive. Protege
+    // d'un emballement de brillance (scene sur-exposee -> bloom geant). Inoffensif
+    // sur un rendu sain (HDR de scene normal < ~16). Configurable / NK_HDR_CLAMP.
+    float hdrClamp = pc.p2.w;
+
+    // HDR * exposure, * SSAO (assombrit les zones occluses), + Bloom.
+    // LA COUVERTURE VOYAGE AVEC LA COULEUR : le PBR ecrit deja alpha = 1 sur la
+    // geometrie, et la passe Geometry efface avec l'alpha demande -- la cible
+    // HDR porte donc une couverture juste. L'ecraser plus bas la detruisait
+    // pour toute la suite, et rendait impossible la sortie a fond transparent :
+    // il fallait rendre DEUX fois, sur fond noir puis blanc, pour la
+    // reconstruire par difference. Un tonemap agit sur la LUMINANCE ; il n'a
+    // aucune raison de toucher a la couverture.
+    // L'EXPOSITION VIENT EN DERNIER, JUSTE AVANT LE TONEMAP.
+    // Elle ne multipliait que uHDR ; le bloom, lui, était ajouté APRÈS, sans
+    // jamais être exposé. Conséquence : aucune valeur d'exposition — ni la
+    // manuelle, ni l'automatique à sa borne basse — ne pouvait assombrir un
+    // halo. Sur un émissif à 100, la scène tombait bien à 5 (sous le seuil de
+    // saturation d'ACES, ~9) mais le bloom continuait de livrer ~150 : le
+    // disque blanc plat survivait à tout réglage. La chaîne correcte compose
+    // d'abord la scène et son halo, PUIS expose l'ensemble.
+    // (Rihen, 14 août : « quelque chose réinjecte de l'énergie après
+    // l'exposition ». C'était exactement ça.)
+    vec4  hdrS  = texture(uHDR, vUV);
+    vec3  scene = hdrS.rgb;
+    if (hdrClamp > 0.0) scene = min(scene, vec3(hdrClamp));
+    float ao    = texture(uSSAO, vUV).r;        // SSAO aligné HDR → vUV (PAS bloomUV)
+    scene *= ao;
+    vec3  bloom = texture(uBloom, bloomUV).rgb; // bloom Y-up sur DX → bloomUV
+    scene += bloom * bloomStr;
+    vec3  hdr   = scene * exposure;
+    if (hdrClamp > 0.0) hdr = min(hdr, vec3(hdrClamp));
+
+    // Tonemap ACES filmic.
+    vec3 mapped = ACESFilm(hdr);
+
+    // Gamma manuel (VK swapchain sRGB gère le gamma → pc.gamma=1.0 côté VK).
+    if (gamma > 1.01) mapped = pow(mapped, vec3(1.0 / gamma));
+
+    // Saturation.
+    if (abs(saturation - 1.0) > 0.01) {
+        float lum = dot(mapped, vec3(0.2126, 0.7152, 0.0722));
+        mapped = clamp(mix(vec3(lum), mapped, saturation), 0.0, 1.0);
+    }
+
+    // Color Grading LUT 3D (bias texel pour éviter le bleed aux bords).
+    float lutStrength = pc.p1.y;
+    float lutSize     = pc.p1.w;
+    if (lutStrength > 0.001 && lutSize > 0.5) {
+        vec3 lutCoord = clamp(mapped, 0.0, 1.0)
+                      * ((lutSize - 1.0) / lutSize)
+                      + (0.5 / lutSize);
+        vec3 graded   = texture(uColorLUT, lutCoord).rgb;
+        mapped = mix(mapped, graded, clamp(lutStrength, 0.0, 1.0));
+    }
+
+    // Vignette.
+    if (vignetteIntens > 0.001) {
+        vec2 uv = vUV * 2.0 - 1.0;
+        mapped *= clamp(1.0 - dot(uv, uv) * vignetteIntens, 0.0, 1.0);
+    }
+
+    oColor = vec4(mapped, hdrS.a);
+}

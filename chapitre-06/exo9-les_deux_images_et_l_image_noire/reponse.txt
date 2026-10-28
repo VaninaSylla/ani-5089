@@ -1,0 +1,44 @@
+Ce qui diffère le plus : les contours — et surtout ceux du mur de droite.
+difference.png le montre à l'œil : les arêtes de la porte (mur du fond,
+à plus de 3 m) brillent en blanc vif, les bords de la fenêtre de droite
+encore plus (le mur le plus proche de la tête, à peine plus d'un mètre),
+les jonctions mur/plafond tracent des lignes fines, et les grands aplats
+muraux restent noirs. Chiffres à l'appui : 78 585 pixels sur 460 800
+(17 % de l'image) dépassent un écart de 1, et le maximum atteint 94 sur
+255 — un seul canal a bougé de près de 40 % de sa valeur, sur les bords
+les plus tranchés. Les surfaces unies, elles, ne bougent quasiment pas :
+une teinte plate vue de deux points proches reste la même teinte plate ;
+seuls les silhouettes, les ombres portées et les dégradés lumineux
+laissent voir le décalage.
+
+Pourquoi là : c'est la parallaxe binoculaire, et elle obéit à une loi
+simple — un objet de profondeur z se décale entre les deux yeux de
+IPD × f / z pixels (f = distance focale en pixels de la focale 70° en
+640×720, soit environ 1 300 px ; IPD = 63 mm). À un mètre, le décalage
+est d'environ 80 pixels ; à 3 m, vingt-sept ; au-delà, presque rien.
+Les bords de la fenêtre de droite sont les plus décalés parce que ce mur
+est le plus proche — d'où le halo blanc le plus large de l'image ; la
+porte, trois fois plus loin, montre des lignes plus fines ; les murs
+uniformes, sans texture, ne montrent rien du tout (rien à décaler sur
+un aplat), si bien que la différence n'éclate qu'aux silhouettes —
+exactement ce que voit difference.png, où l'amplification de 4× rend
+lisible jusqu'aux faibles écarts des dégradés d'ombre. Le maximum de 94
+tombe sur l'arête entre le mur sombre et le bord de fenêtre éclairé :
+le contraste le plus brutal de la scène, là où un décalage de quelques
+pixels fait varier le canal d'un coup.
+
+Ce que prouve le noir : difference-vue-oubliee.png est toute noire, et
+difference.txt le dit sans détour — vue oubliee : 0 pixels sur 460800,
+ecart max 0. Quand les deux caméras sont posées au même point (IPD nul),
+les deux renderers, malgré leur double initialisation, leur TAA chacun
+de son côté, leurs captures relues depuis le disque, produisent deux
+images rigoureusement identiques au bit près : la comparaison ne fabrique
+aucun écart, l'amplification de 4× ne révèle aucun bruit, l'image de
+différence ressort parfaitement noire. C'est le témoin de l'expérience :
+le banc est calibré à zéro. Donc les 78 585 pixels et le maximum de 94
+de la paire à IPD 63 mm viennent des deux yeux, et de rien d'autre —
+ni du compilateur, ni des rendus successifs, ni de la relecture PNG.
+Sans ce noir, la mesure des deux yeux ne prouverait rien ; avec lui,
+elle ne prouve qu'une chose : deux yeux voisins ne voient pas la même
+image — et c'est précisément cette différence que le cerveau transforme
+en profondeur.

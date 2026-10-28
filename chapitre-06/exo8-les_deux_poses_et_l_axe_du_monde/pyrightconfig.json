@@ -1,0 +1,22 @@
+{
+    "include": [
+        "**/*.py",
+        "**/*.jenga"
+    ],
+    "exclude": [
+        "Build/**",
+        "Externals/**",
+        ".vscode/**",
+        "**/__pycache__",
+        "**/node_modules"
+    ],
+    "pythonVersion": "3.8",
+    "reportMissingImports": "warning",
+    "reportUndefinedVariable": "warning",
+    "reportWildcardImportFromLibrary": "none",
+    "extraPaths": [
+        "C:/Users/ngono/AppData/Local/Programs/NKCode/tools/jenga-src",
+        ".jenga/typings"
+    ],
+    "_jengaIdeConfigVersion": "b5d777e5f62739ce"
+}

@@ -1,0 +1,39 @@
+Où vit le décentrage : dans la colonne 2, lignes 0 et 1 — les deux termes
+mat[2][0] et mat[2][1]. Ce sont les « shears » de projection : dans ma
+fonction, mat[2][0] = (tanRight + tanLeft)/(tanRight − tanLeft) et
+mat[2][1] = (tanUp + tanDown)/(tanUp − tanDown). Quand la fenêtre est
+symétrique, tanLeft = −tanRight et tanDown = −tanUp, donc les deux
+termes s'annulent exactement et la matrice est celle d'une caméra
+classique centrée. Dès qu'on décale les angles (un œil de VR ne regarde
+pas droit dans le même tunnel que l'autre), tanLeft et tanRight ne
+sont plus opposés, les deux termes deviennent non nuls, et c'est
+eux qui glissent l'image vers l'endroit où l'œil regarde réellement —
+sans toucher au reste de la matrice (les lignes 0 et 1 hors colonne 2,
+la ligne 3, la colonne de translation restent identiques).
+
+Ce que valent ces termes en symétrique : zéros. Et c'est exactement
+ce que ecarts.txt confirme : sur la ligne 0 du test symétrique, le
+seul écart non nul est −0.000000060 sur mat[0][0] (arrondi float32
+entre ma tangente et celle du moteur, ~6e-8), les trois autres colonnes
+sont à 0.000000000, et les lignes 1, 2, 3 sont toutes exactement nulles.
+Le plus grand écart global de 0.000000060 prouve que ma matrice
+écrite à la main compose la même chose que NkMat4f::Perspective —
+mat[0][0], mat[1][1], mat[2][3] = −1, les coefficients de profondeur
+mat[2][2] et mat[3][2] — tout tombe juste, à la précision float près.
+
+Ce que j'ai vérifié de plus : l'œil gauche décentré (test quest) ne
+bouge que la profondeur et les shears, et rien d'autre. En comparant
+matrice à matrice avec cam.GetProj() après SetFovAsym, ecarts.txt
+montre que la ligne 0 est entièrement nulle, la ligne 1 ne présente
+qu'un −0.000000104 sur la colonne 2 (encore un float32), et surtout
+les lignes 2 et 3 sont exactement nulles — donc la profondeur
+(mat[2][2] et mat[3][2]) est calée au bit près sur celle de la caméra
+moteur, ce qui prouve que mon paramètre depthZeroToOne=false (convention
+OpenGL, comme Perspective par défaut) est bien celle que GetProj()
+retourne. Au passage, j'ai testé l'hypothèse inverse (paramètre à true,
+convention Vulkan [0,1]) : elle produisait 0.000500202 sur mat[2][2]
+et 0.050025012 sur mat[3][2] — soit exactement l'écart entre les deux
+conventions de profondeur, ce qui confirme a contrario le choix OpenGL.
+Et les shears décentrés de la fenêtre de gauche restent invisibles dans
+la comparaison parce que les deux matrices les calculent pareil — la
+différence ne peut donc pas les voir, seule l'égalité peut.

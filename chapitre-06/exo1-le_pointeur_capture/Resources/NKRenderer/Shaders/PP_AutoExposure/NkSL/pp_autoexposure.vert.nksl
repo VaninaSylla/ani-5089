@@ -1,0 +1,35 @@
+// pp_autoexposure.vert.nksl — NKRenderer — Auto-exposure : mesure de luminance (VS)
+// Cible = UNE cible 1x1 : ce triangle plein écran ne couvre donc qu'un seul pixel,
+// dont le fragment réduit toute l'image HDR en une luminance moyenne.
+// Aucun input sommet (gl_VertexID) → aucun Y-flip automatique n'est injecté, et la
+// moyenne logarithmique est de toute façon invariante à l'orientation : ce shader
+// n'a AUCUNE convention Y par backend (contrairement au tonemap et au bloom).
+//
+// Le bloc push_constant doit être DÉCLARÉ À L'IDENTIQUE dans le VS et le FS :
+// une divergence donne « type mismatch between shaders for uniform _PushConstants »
+// au link OpenGL (piège déjà rencontré sur ce dépôt).
+
+@location(0) out vec2 vUV;
+
+layout(push_constant) uniform PC {
+    vec4 p0;   // (dtSeconds, adaptSpeed, minLuma, maxLuma)
+    // p1 n'est LUE QUE par le fragment. Elle est neanmoins declaree ici, et
+    // elle DOIT l'etre : GLSL ES 3.00 (WebGL2) refuse au link deux tailles de
+    // tableau differentes pour le meme uniforme entre deux etages --
+    // « Array sizes of uniform '_PushConstants' differ between VERTEX and
+    // FRAGMENT shaders ». Le generateur transforme ce bloc en
+    // `uniform vec4 _PushConstants[N]` : N valait 1 ici et 2 dans le fragment.
+    // GL bureau tolerait, ES refuse. Mesure du 2026-09-02 : c'etait la SEULE
+    // erreur du journal web, et le SEUL couple du depot ou les deux etages
+    // declarent le bloc avec des tailles differentes (audit des 41 couples).
+    vec4 p1;   // (bloomStrength, hasBloom, _, _) — inutilisee par le VS
+} pc;
+
+@stage(vertex)
+@entry
+void main() {
+    vec2 pos = vec2((gl_VertexID == 1) ? 3.0 : -1.0,
+                    (gl_VertexID == 2) ? 3.0 : -1.0);
+    gl_Position = vec4(pos, 0.0, 1.0);
+    vUV = pos * 0.5 + 0.5;
+}

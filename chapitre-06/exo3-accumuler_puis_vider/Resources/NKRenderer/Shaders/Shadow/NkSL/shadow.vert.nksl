@@ -1,0 +1,37 @@
+// shadow.vert.nksl — NKRenderer — Shadow depth-only VS (VRAI dialecte NkSL)
+// Traduit de Shadow/VK/shadow.vert.vk.glsl. Depth-only (aucun varying out) →
+// le générateur GL ne flippe PAS Y (cohérence avec le sampling shadow map PBR).
+
+@location(0) in vec3 aPos;
+
+// set=1 (Object) pour matcher la convention NkRender3D (set=0=global, set=1=object).
+@binding(set=1, binding=1)
+uniform ObjectUBO {
+    mat4  model;
+    mat4  normalMatrix;
+    vec4  tint;
+    float metallic;
+    float roughness;
+    float aoStrength;
+    float emissiveStrength;
+    float normalStrength;
+    float clearcoat;
+    float clearcoatRoughness;
+    float subsurface;
+    vec4  subsurfaceColor;
+} uObj;
+
+layout(push_constant) uniform PC {
+    mat4 lightVP;
+} pc;
+
+@stage(vertex)
+@entry
+void main() {
+    // La correction Z clip-space [-1,1]→[0,1] (VK/DX) est désormais BAKÉE dans la
+    // matrice lightVP côté C++ (NkVirtualShadowMaps::ApplyDepthClipCorrection, fix
+    // aa9f691f), pour les chemins RENDER ET SAMPLE de façon cohérente. La refaire ici
+    // donnait une DOUBLE correction Z → profondeur d'atlas fausse → ombres "flottantes"
+    // (détachées du sol) sur DX12/VK. On laisse donc la matrice gérer le Z.
+    gl_Position = pc.lightVP * uObj.model * vec4(aPos, 1.0);
+}

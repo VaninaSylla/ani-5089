@@ -1,0 +1,37 @@
+Lecture du module : la version « lu » ajoute à chaque image la valeur que le
+module garde, NkInput.MouseRawDeltaX() — ici 8 comptes. Or le module ne la
+vide jamais (NkEventState : OnRaw l.646 écrase, seul Clear() l.678 remet à
+zéro, et personne n'appelle Clear entre deux images). Le même 8 est donc
+répété image après image : sur trois.txt, de t = 4.0 s, lu = 121.9 à
+t = 18.0 s, lu = 892.0, la tête a tourné de 892.0 − 121.9 = 770.1 deg
+pendant 14.0 s, soit 770.1 / 14.0 = 55.0 deg/s — une dérive constante, à
+vitesse fixe, alors que la souris ne bouge plus depuis avant t = 3.0 s.
+
+Accumulé et vidé : la version « vide » ajoute chaque événement brut dans son
+accumulateur, puis lit l'accumulateur une fois par image et le vide aussitôt.
+Le mouvement est donc consommé UNE seule fois : pendant le geste, les
+320 comptes poussés vers la droite ont été lus et dépensés, ce qui donne
+320 × 0,002 rad = 0,64 rad = 36.7 deg — et depuis, l'accumulateur vaut zéro
+à chaque lecture. Résultat sur trois.txt : la colonne vide affiche 36.7 sur
+TOUTES les lignes, de t = 1.0 s à t = 18.0 s. La tête s'est arrêtée exactement
+quand la main s'est arrêtée ; c'est cette version qui pilote la caméra.
+
+Accumulé sans vidage : même accumulateur, mais jamais vidé : il garde la
+somme de TOUS les événements depuis le lancement, soit les 320 comptes du
+geste (8 comptes × 40 événements). Chaque image relit cette somme entière et
+l'ajoute : 320 × 0,002 = 0,64 rad = 36.7 deg par image, soit, à 60 images
+par seconde, 36.7 × 60 = 2200 deg/s. Mesuré sur trois.txt : de t = 4.0 s,
+sans vidage = 4877.0 à t = 16.0 s, sans vidage = 31279.3, soit
+31279.3 − 4877.0 = 26402.3 deg en 12.0 s = 2200.2 deg/s — trente-neuf fois
+la dérive de « lu », parce que le module ne rejoue que le DERNIER événement,
+tandis que notre accumulateur non vidé rejoue toute l'histoire.
+
+Ce que fait le vidage : il transforme une mémoire en un mouvement. Lire puis
+vider une fois par image dit à chaque image « voici ce qui est arrivé
+depuis la précédente », et rien de plus : quand la main s'arrête, l'accumulateur
+vaut zéro et la tête s'arrête (vide = 36.7, figé). Sans vidage, l'accumulateur
+devient un registre que chaque image rejoue indéfiniment — on reproduit
+alors, chez soi, le défaut même du module qu'on contournait : une valeur qui
+ne se remet jamais à zéro. L'ordre compte aussi : on lit d'abord, on vide
+ensuite (vider d'abord, c'est lire zéro), et on vide après la boucle des
+événements — y vider ne garderait que le dernier mouvement de l'image.

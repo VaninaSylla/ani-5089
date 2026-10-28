@@ -1,0 +1,32 @@
+Ma sensibilité : 0,002 rad/compte du capteur brut. C'est la valeur choisie
+dans derive.cpp (kSensibilite = 0.002f) : un compte de déplacement brut vaut
+0,002 radian de lacet. Elle a été fixée avant la mesure et gardée telle quelle
+pendant toute l'expérience ; c'est elle qui convertit les comptes de la
+colonne brut en un angle de tête, image après image.
+
+Vitesse de dérive : 55.1 deg/s
+
+D'où vient ce chiffre : il est calculé sur deux lignes éloignées de derive.txt,
+après l'arrêt de la souris — t = 4.0 s, lacet = 217.3 deg et t = 16.0 s,
+lacet = 878.2 deg. Entre ces deux lignes, la tête a tourné de
+878.2 − 217.3 = 660.9 deg pendant 16.0 − 4.0 = 12.0 s, soit
+660.9 / 12.0 = 55,075, arrondi à 55.1 deg/s. Le calcul avec les autres
+colonnes redonne le même résultat : de t = 4.0 à t = 16.0, les images sont
+passées de 237 à 958, soit 721 images ; chaque image ajoute
+brut × sensibilité = 8 × 0,002 = 0,016 rad = 0,917 deg, donc
+721 × 0,016 = 11,54 rad = 661 deg, ce qui tombe sur les 660,9 deg relevés
+(à l'arrondi de 0,1 deg des lignes imprimées). Le programme tournait à
+721 / 12,0 = 60,1 images par seconde, d'où 0,016 × 60,1 = 0,962 rad/s
+= 55,2 deg/s : la même vitesse, obtenue par une autre route.
+
+Pourquoi elle ne s'arrête pas : regardez la colonne brut : elle vaut 8 sur
+TOUTES les lignes, de t = 4.0 s à t = 16.0 s, alors que la souris ne bouge
+plus depuis avant t = 4.0 s. La valeur ne retombe jamais à zéro parce que
+NkInput.MouseRawDeltaX() rend le delta du DERNIER événement brut reçu, pas
+un déplacement de l'image. Constaté dans NkEventState.h : OnRaw(rdx, rdy)
+écrase rawDeltaX à chaque événement (ligne 646), et la seule écriture qui le
+remet à zéro est Clear() (ligne 678), appelée à l'initialisation — personne
+ne le vide entre deux images. Le module garde donc 8 indéfiniment, et notre
+tête, qui ajoute ce 8 à chaque image, tourne toute seule à 55,1 deg/s pour
+l'éternité : le défaut ne plante rien, il ne s'annonce nulle part, et on
+n'aurait jamais su sans la colonne brut.

@@ -1,0 +1,50 @@
+# Fichier de projet Jenga pour exo10-la_projection_a_la_main (sprint 6)
+# Conforme au projet de depart MaSalle : kit R3D, console (les printf se
+# voient). Pas de nuanceurs : le programme n'ouvre pas de fenetre.
+import sys
+
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+KIT_ROOT = r"C:\Users\ngono\Desktop\ani-5089\Kits\R3D"
+
+with workspace("Exo10Wks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    useconfig(KIT_ROOT + "/R3D.jenga")
+
+    with project("Exo10Projection"):
+        consoleapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["projection.cpp"])
+
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+
+        user3d()
+
+        # Le kit a ete compile avec un autre llvm-mingw que le notre :
+        # libc++ est embarquee a la fois dans NKGLSlang.lib et dans libc++.a.
+        # Les symboles sont identiques ; on laisse passer les definitions
+        # multiples (meme raison que MaSalle et chapitre-05).
+        ldflags(["-Wl,--allow-multiple-definition"])
+
+        with filter("system:Windows"):
+            ldflags(["-static"])
+
+        with filter("configurations:Release"):
+            defines(["NDEBUG"])
+            optimize("Speed")
+
+        objdir("%{wks.location}/Build/Obj/%{cfg.buildcfg}-%{cfg.system}/%{prj.name}")
+        targetdir("%{wks.location}/Build/Bin/%{cfg.buildcfg}-%{cfg.system}/%{prj.name}")
+
+        usetoolchain("clang-mingw")

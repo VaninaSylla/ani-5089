@@ -1,0 +1,39 @@
+Ce que fait le monde : la souris ne fait qu'une seule chose — tourner le
+lacet autour de l'axe vertical de la pièce. Rien d'autre ne bouge : le
+tangage reste figé à 30°. Avec le bon ordre (lacet*tangage), le monde
+promène à l'horizontale un regard qui a déjà été levé : les dix lignes de
+hauteurs.txt montrent les cinq hauteurs constantes à 30,00 deg — le regard
+décrit un cercle horizontal, on voit autant de plafond au lacet 180 qu'au
+lacet 0 (bon-90.png : le coin du plafond, exactement comme au départ, vu
+vers −X). Avec l'ordre fautif (tangage*lacet), la même rotation de lacet
+détruit la hauteur progressivement : 30,00 → 20,70 → 0,00 → −20,70 →
+−30,00 deg — le regard suit un cosinus du lacet et traverse l'horizon en
+routant (mauvais-90.png : le même mur qu'on voyait à 30° au-dessus, à
+hauteur des yeux, avec l'horizon penché). Le monde n'a rien changé à sa
+rotation ; c'est l'ordre dans lequel on l'applique qui décide s'il promène
+le regard à hauteur constante ou s'il le fait plonger.
+
+Autour de quel axe : avec le bon ordre, le cône tourne autour de +Y du
+monde — l'axe vertical de la pièce — avec un demi-angle de 60° (le regard
+reste à 30° au-dessus de l'horizon). C'est le geste de la tête : le cou
+s'incline d'abord, la rotation de lacet transporte ensuite ce cône-là,
+toujours vertical. Avec l'ordre fautif, le cône penche : la rotation de
+tangage s'applique APRÈS le lacet, autour de l'axe X DU MONDE, donc l'axe
+du cône devient Y lui-même incliné de 30° — l'horizon se voit dans la
+caméra elle-même, puisque cd.up = q * (0,1,0) passe par le même mauvais
+ordre : la vue de mauvais-90.png est penchée d'environ 30° (le coin du mur
+découpe l'image en diagonale), alors que bon-90.png est parfaitement
+d'aplomb. Un cône autour de la verticale de la pièce, ou un cône autour
+d'un axe qui dérive : c'est là que le monde et l'ordre se rencontrent.
+
+L'ordre fautif : tangage*lacet — celui qui fait tourner la tête d'abord,
+puis l'incline autour de l'axe X de la SALLE. Un cou ne s'incline pas
+autour d'un axe emprunté à la pièce : son axe de tangage suit la tête
+quand elle tourne, c'est-à-dire l'ordre lacet*tangage, celui que la matrice
+de RotationY * RotationX rejoignait déjà dans exo5 et que hauteurs.txt
+confirme ici en images : hauteurs constantes à 30,00 deg pour lacet*tangage,
+courbe en cosinus pour tangage*lacet. Les trois captures le montrent à
+l'œil : bon-90.png et mauvais-90.png regardent le même mur depuis la même
+position, à la même seconde, avec le même lacet 90 — seul l'ordre change,
+et l'un voit le plafond d'aplomb, l'autre l'horizon penché. Même verre,
+deux façons de tenir la tête — et une seule ressemble à une tête.

@@ -1,0 +1,36 @@
+﻿Pourquoi cette direction : elle vient du repère de la salle, pas d'une
+formule. La salle est à main droite : avant = −Z, haut = +Y, donc droite = +X.
+Un lacet positif est une rotation autour de +Y qui tourne l'avant à GAUCHE :
+de −Z, un quart de tour positif amène à −X — d'où l'attendu (−1, 0, 0)
+écrit en dur pour lacet 90, tangage 0. Le tangage positif, lui, lève le
+regard vers +Y : lacet 0, tangage 30 donne y = sin 30 = 0,5 avec l'avant
+réduit de cos 30, soit (0, 0,5, −0,86603). L'épreuve lacet 90, tangage 30
+vérifie la composition des deux : même direction de base (−X), élevée de 30°,
+soit (−cos 30, sin 30, 0) = (−0,86603, 0,5, 0). Ces trois attendus sont des
+littéraux dans le code : ils viennent du raisonnement, jamais de Regard() —
+un test qui recalcule ce qu'il vérifie ne peut pas échouer. La tolérance de
+1e-4 existe parce que cos(90°) calculé en float ne vaut pas exactement zéro.
+
+L'épreuve qui sait dire non : la première, lacet 90, tangage 0. Avec le signe
+du lacet inversé dans Regard() (essai fait, puis remis d'aplomb), elle affiche
+attendu (-1.0000, 0.0000, 0.0000), obtenu (1.0000, 0.0000, 0.0000), ECHEC —
+le regard part vers +X au lieu de −X. La seconde échoue aussi (x = +0,86603
+au lieu de −0,86603), et la troisième reste OK, parce qu'avec lacet 0 le signe
+inversé ne change rien : c'est bien le lacet qu'on a cassé, et rien d'autre.
+Les deux lignes ECHEC descendent dans le code de sortie : nkmain rend 1
+(printemps de test, avant toute fenêtre), et le lancement suit dans test.txt
+avec « code de sortie : 1 ». À l'inverse, le programme correct rend 0. La
+ligne « OK » seule ne prouverait rien — c'est le code de sortie qui juge, il
+se lit avec $LASTEXITCODE (PowerShell) ou echo $? (Git Bash).
+
+Ce que la souris ne permettait pas : piloter une tête à la souris, on obtient
+des orientations approximatives et fuyantes — on ne peut pas lui dire « regarde
+exactement à 90° vers la gauche », on ne peut pas répéter deux fois le même
+geste, et rien ne dit si le regard atterrit où on le croyait. Il fallait donc
+une fenêtre, une main, et l'œil pour juger — à chaque construction. PoserTete
+coupe ce lien : la pose est posée par trois nombres exacts, le test tourne
+avant l'ouverture de la fenêtre, sans souris ni personne, et son verdict part
+dans le code de sortie. On peut ainsi vérifier à chaque build, et dans une
+chaîne automatique, qu'une modification de Regard() n'a pas inversé un axe —
+essai impossible à mener à la souris, et pourtant c'est exactement le genre de
+régression qu'une souris ne montre jamais.

@@ -1,0 +1,29 @@
+Avec CaptureMouse seul :
+Cache le pointeur et attire la souris, mais ne l'empêche pas de sortir :
+poussée vers la droite, la souris est allée jusqu'à (1535,442) — le bord de
+l'écran — alors que la fenêtre s'arrête en x=1279. Le pointeur est invisible
+tant qu'il reste sur la fenêtre, et réapparaît dès qu'il la quitte.
+
+Ce qui le retient :
+ClipMouseToClient(true), et rien d'autre. Mesuré : au démarrage
+GetClipCursor() rend (257,158)-(1279,728), la zone client ; une poussée de
+6750 px s'arrête ensuite pile sur les bords du client (x=1259, y=727 sur la
+limite de 1279/727) — le curseur ne dépasse jamais, il reste caché.
+
+Deux appuis de suite :
+ShowMouse n'est pas un booléen, c'est le compteur ShowCursor du système.
+Deux appuis sur ENTRÉE puis un seul ESPACE : le journal passe de masques=1
+à masques=2 puis 3, redescend à 2 — et le curseur, mesuré au centre de la
+fenêtre, reste INVISIBLE. Il faut autant de ShowMouse(true) que de
+ShowMouse(false) : deux ESPACE de plus font masques=0 et le pointeur
+redevient visible.
+
+Fermeture sans relâcher :
+Fermeture par la croix sans rien rendre (libération désactivée pour
+mesurer) : après la mort du processus, curseur visible et
+clip=(0,0)-(1536,864) — sur cette machine rien n'a survécu, la fin du
+processus remet l'état d'origine. Mais un ClipCursor posé nu survit à la
+mort de son processus (test isolé) : on ne compte donc jamais sur le
+système. Le programme rend le pointeur avant de finir, croix comprise —
+un ShowMouse(true) par masque en attente, CaptureMouse(false),
+ClipMouseToClient(false) (journal : « libere avant la fin »).

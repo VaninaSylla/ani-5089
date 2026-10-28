@@ -1,0 +1,45 @@
+Le rapport : sur les médianes de mesures.txt, le chemin matriciel coûte
+448,510 ms là où le chemin quaternion coûte 55,485 ms — un rapport d'environ
+8 en Debug. En Release (optimize("Speed") + NDEBUG dans le filter du projet),
+81,101 ms contre 29,485 ms — environ 2,8. L'optimisation rétrécit l'écart
+(l'inlining avale une partie des constructions matricielles), mais le
+quaternion reste le plus rapide dans les deux cas, jamais l'inverse. La
+mesure est honnête : un million d'itérations par point, trois points par
+chemin et par configuration, échaudage jeté, et les sommes des quatre
+composantes imprimées derrière chaque ligne — ces sommes sont rigoureusement
+identiques d'une mesure à l'autre et d'une configuration à l'autre
+(w=434265.987510, y=435616.379137, …), preuve que le compilateur n'a sauté
+aucune itération et que Debug et Release calculent les mêmes rotations au
+binaire près. Une remarque de rigueur au passage : la comparaison des deux
+chemins est faite avec tolérance de signe, parce que le test brut l'avait
+montré — à lacet 191,8° (wrapé en −168,2° par NkAngle), la matrice relue par
+NkQuatf renvoie l'opposé du produit de Hamilton : q et −q sont pourtant la
+même rotation (double couverture). Les 27 poses échantillonnées donnent bien
+la même rotation, dont 6 avec quaternion simplement inversé de signe.
+
+Le coût par image : en Release, une composition de quaternions mesure
+29,485 ms / 1 000 000 = 29,5 ns ; la salle en fait une par image pour la
+caméra (regard et up tirés du même q). Même en y ajoutant les rotations de
+vecteurs, on reste sur une quarantaine de nanosecondes par image, soit
+environ 0,0004 % du budget de 11 ms d'une image à 90 Hz — trois ordres de
+grandeur en dessous, un budget qui ne sent même pas passer le choix. Le
+chemin matriciel, à 81,1 ns par composition, renverrait lui aussi environ
+0,0007 % : pour UNE caméra, les deux chemins sont gratuits. Le rapport de
+vitesse (×2,8 en Release) ne se paie qu'à l'échelle — une animation à
+plusieurs dizaines d'articulations, une physique multi-corps — mais là il
+devient comptant, et il n'y a jamais de situation où le matriciel rattrape
+le quaternion.
+
+Ce que je pense du choix : tenir la tête en quaternion est le bon appel, et
+les chiffres le confirment sans équivoque — le quaternion est le plus rapide
+des deux chemins (×8 en Debug, ×2,8 en Release), les deux donnent exactement
+la même rotation (vérifié pose par pose, tolérance de signe comprise), et
+c'est la même écriture que celle qui, depuis exo5, rejoint la matrice et le
+ordre d'une tête — lacet*tangage, un seul objet, regard et up tirés du même
+q comme le fait exo6. La matrice reste utile : c'est le juge des tests, le
+référent indépendant qu'on ressort quand un ordre fait débat — mais dans la
+boucle de rendu, elle ne serait qu'un détour plus lent pour obtenir le même
+q. Pour une seule caméra les deux sont gratuits face au budget de 11 ms ; le
+choix du quaternion ne se justifie donc pas par nécessité, il se justifie
+par mérite : même résultat, moindre coût, et une composition dont le sens —
+enfin mesuré, enfin vérifié — ne dépend plus de personne.

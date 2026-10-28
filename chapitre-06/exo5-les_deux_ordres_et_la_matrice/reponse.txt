@@ -1,0 +1,46 @@
+L'ordre que rejoint la matrice : c'est lacet*tangage. Les trois chiffres
+le disent : la ligne « matrices » est identique à la ligne « lacet*tangage »
+aux quatre décimales — (−0,6124, 0,5000, −0,6124) des deux côtés — tandis que
+« tangage*lacet » donne (−0,7071, 0,3536, −0,6124), un autre regard. Le
+raisonnement est écrit dans le moteur : NkQuat.h affiche « Convention :
+'other' est appliqué AVANT 'this' — (a * b) * v == a * (b * v), et mat(a * b)
+== mat(a) * mat(b) » à côté de l'opérateur de produit. Donc qLacet * qTangage
+applique le tangage d'abord, puis le lacet — et RotationY * RotationX, en
+vecteurs colonnes, applique RotX d'abord, RotY ensuite : mêmes deux rotations
+dans le même ordre, donc mêmes résultats. Le quaternion écrit « lacet*tangage »
+et la matrice « RotationY * RotationX » sont les deux écritures d'une seule et
+même composition ; la troisième ligne de regards.txt la confirme chiffre pour
+chiffre.
+
+L'ordre d'une tête : la tête humaine tourne autour de son propre axe, celui
+qui monte avec elle — on lève les yeux de 30° puis on tourne la tête, et
+après le virage on regarde toujours à 30° au-dessus de l'horizon. C'est
+exactement le bon ordre : la composante y reste sin 30° = 0,5000 quel que soit
+le lacet, parce que le tangage s'effectue face à −Z, puis la rotation de lacet
+transporte ce regard incliné autour de +Y sans jamais toucher à y. L'autre
+ordre décrit un geste que personne ne fait : tourner la tête d'abord, puis
+l'incliner autour de l'axe X DU MONDE, un axe qui n'a rien à voir avec la
+tête maintenant tournée — et l'inclinaison « se perd » dans le virage
+(y = 0,3536 = 0,5 × cos 45°, l'inclinaison ne joue plus qu'en partie).
+Un tour de cou n'est pas une rotation dans le référentiel de la salle : c'est
+celle qui préserve la hauteur du regard qui ressemble à une tête — et c'est
+l'ordre que rejoignent la matrice et le produit lacet*tangage.
+
+Comment je l'ai vérifié : (1) le calcul à la main est dans ordres.cpp, écrit
+en littéral — lever les yeux de 30°, c'est sin(30°) = 1/2 exactement, soit
+0,5f, indépendamment du lacet ; c'est l'attendu qu'on affronte aux trois
+impressions, sans jamais repasser par le code sous examen. (2) Confrontation :
+lacet*tangage → 0,5000 ✓, matrices → 0,5000 ✓, tangage*lacet → 0,3536 ✗, et
+l'écart n'est pas un bruit d'arrondi : il vaut exactement 0,5 × cos 45° =
+0,3536 — il a une explication géométrique, signe qu'on lit un vrai ordre
+faux, pas une imprécision. (3) Le chemin matriciel est le juge indépendant :
+RotationY * RotationX appliquée à (0,0,−1) ne dépend d'aucune convention de
+produit quaternion, et pourtant sa ligne coïncide avec lacet*tangage aux
+quatre décimales — deux écritures qui ne se recopient pas donnent les mêmes
+chiffres, ce n'est pas un hasard. (4) La prose du moteur ne fait pas foi :
+NkQuat.h relevait lui-même qu'à côté de l'opérateur le commentaire disait
+autrefois « APRÈS » pendant que le code calculait « AVANT » (08/10), et
+NkMat.h signale que RotationX renvoyait jadis la transposée, soit un angle
+négatif. Des erreurs comme ça, c'est ce que la confrontation à la main attrape
+— et c'est pour cela que l'attendu est un littéral posé à côté du code,
+jamais une seconde version du même calcul.

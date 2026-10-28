@@ -1,0 +1,94 @@
+// pp_bloomdown.frag.nksl — NKRenderer — Bloom Downsample 13-tap (VRAI dialecte NkSL).
+// AUTEUR : TEUGUIA TADJUIDJE Rodolf Séderis — Rihen
+@location(0) in  vec2 vUV;
+@location(0) out vec4 oColor;
+
+@binding(set=0, binding=0) uniform sampler2D uSrc;
+
+layout(push_constant) uniform PC {
+    vec2  srcInvSize;
+    float threshold;
+    float yFlipUV;
+} pc;
+
+// SEUIL A GENOU (Jimenez 2014, celui de Blender, Unity et Unreal).
+//
+// L'ANCIENNE formule etait `soft = (br - thr)^2 / (4 thr)`, sans borne, et
+// `contrib = max(soft, br - thr)`. Sa branche quadratique ne servait a rien sous
+// 5 seuils (toujours sous la lineaire) et AMPLIFIAIT au-dela : contribution > 1
+// des ~5,8 seuils, x2,10 a 10 seuils, x4,38 a 20 seuils par unite de (S - seuil),
+// mesure sur le banc (vue 6, Q193). C'est une des deux causes de « l'eponge ».
+//
+// Ici la rampe quadratique est BORNEE a la zone de transition
+// [thr - genou, thr + genou] : rq = clamp(br - thr + genou, 0, 2 genou)^2 / (4 genou).
+//   * sous thr - genou : 0 exact ;
+//   * dans la zone : quadratique, continue, au plus genou/4 au-dessus de la
+//     droite max(br - thr, 0) (soit genou/4 AU seuil meme -- c'est ce qu'un genou
+//     EST : l'allumage ne claque plus a pleine largeur au franchissement) ;
+//   * au-dessus de thr + genou : lineaire, exactement br - thr, jamais plus.
+// genou = 0,5 x seuil, l'adoucissement par defaut de Blender et d'Unity.
+vec3 SoftThreshold(vec3 c, float thr) {
+    if (thr <= 0.001) return c;
+    float br    = max(c.r, max(c.g, c.b));
+    float genou = 0.5 * thr;
+    float rq    = clamp(br - thr + genou, 0.0, 2.0 * genou);
+    rq          = rq * rq / (4.0 * genou + 1e-4);
+    float contrib = max(rq, br - thr) / max(br, 1e-4);
+    return c * contrib;
+}
+
+float KarisLuma(vec3 c) {
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+@stage(fragment)
+@entry
+void main() {
+    vec2 t = pc.srcInvSize;
+
+    vec3 a = texture(uSrc, vUV + t * vec2(-1.0,  1.0)).rgb;
+    vec3 b = texture(uSrc, vUV + t * vec2( 0.0,  1.0)).rgb;
+    vec3 c = texture(uSrc, vUV + t * vec2( 1.0,  1.0)).rgb;
+    vec3 d = texture(uSrc, vUV + t * vec2(-0.5,  0.5)).rgb;
+    vec3 e = texture(uSrc, vUV + t * vec2( 0.5,  0.5)).rgb;
+    vec3 f = texture(uSrc, vUV + t * vec2(-1.0,  0.0)).rgb;
+    vec3 g = texture(uSrc, vUV).rgb;
+    vec3 h = texture(uSrc, vUV + t * vec2( 1.0,  0.0)).rgb;
+    vec3 i = texture(uSrc, vUV + t * vec2(-0.5, -0.5)).rgb;
+    vec3 j = texture(uSrc, vUV + t * vec2( 0.5, -0.5)).rgb;
+    vec3 k = texture(uSrc, vUV + t * vec2(-1.0, -1.0)).rgb;
+    vec3 l = texture(uSrc, vUV + t * vec2( 0.0, -1.0)).rgb;
+    vec3 m = texture(uSrc, vUV + t * vec2( 1.0, -1.0)).rgb;
+
+    vec3 col;
+    if (pc.threshold > 0.001) {
+        // Premiere passe (threshold actif) : MOYENNE DE KARIS par groupe de
+        // 4 taps — poids 1/(1+luma) par quad. Un firefly (pixel speculaire
+        // ultra-brillant, ex. metal roughness 0.15 -> lobe GGX en milliers)
+        // voit sa contribution BORNEE au lieu d'exploser en rectangle geant
+        // dans les mips grossieres (flares violets constates en capture).
+        vec3 q0 = (d + e + i + j) * 0.25;
+        vec3 q1 = (a + b + g + f) * 0.25;
+        vec3 q2 = (b + c + h + g) * 0.25;
+        vec3 q3 = (f + g + l + k) * 0.25;
+        vec3 q4 = (g + h + m + l) * 0.25;
+        float w0 = 0.5   / (1.0 + KarisLuma(q0));
+        float w1 = 0.125 / (1.0 + KarisLuma(q1));
+        float w2 = 0.125 / (1.0 + KarisLuma(q2));
+        float w3 = 0.125 / (1.0 + KarisLuma(q3));
+        float w4 = 0.125 / (1.0 + KarisLuma(q4));
+        col = (q0 * w0 + q1 * w1 + q2 * w2 + q3 * w3 + q4 * w4)
+            / (w0 + w1 + w2 + w3 + w4);
+        col = SoftThreshold(col, pc.threshold);
+    } else {
+        // Passes suivantes : downsample 13-tap classique (pas de Karis, la
+        // dynamique est deja bornee par la premiere passe).
+        col = (d + e + i + j) * 0.5
+            + (a + b + g + f) * 0.125
+            + (b + c + h + g) * 0.125
+            + (f + g + l + k) * 0.125
+            + (g + h + m + l) * 0.125;
+        col *= 1.0 / 4.0;
+    }
+    oColor = vec4(col, 1.0);
+}

@@ -1,0 +1,40 @@
+Quand les deux méthodes s'accordent : quand l'axe droit de la tête est
+encore aligné sur l'axe X du monde — et c'est tout. À la pose neutre
+(identity), droite_tete = (1,0,0) = droite_monde : les deux lignes de
+poses.txt sont rigoureusement identiques, G (0.2685, 1.7000, 1.2000) et
+D (0.3315, 1.7000, 1.2000), écart 0,00 mm. C'est aussi le cas pour toutes
+les poses qui ne font que tourner la tête autour de l'axe X du monde lui-
+même — un tangage seul ne bougerait pas droite_tete — mais aucune des
+trois poses de l'exercice n'est de celles-là, sauf la neutre. En pratique,
+la méthode « monde » n'est juste qu'au moment précis où la tête est droite
+et de face ; le moindre roulis ou le moindre lacet la met défaut.
+
+Quand elles divergent : dès que la tête tourne. Le roulis 30 (RotateZ) met
+les yeux « tête » sur une droite inclinée de 30° — G descend à y=1.6842,
+D monte à y=1.7158 — pendant que la méthode « monde » laisse les deux
+yeux à hauteur 1.7000 sur l'horizontale : écart 16.31 mm. Le lacet 90
+(RotateY) est pire encore : l'axe droit de la tête devient (0,0,−1), les
+yeux « tête » se posent devant et derrière la tête (G en z=1.2315,
+D en z=1.1685) pendant que la méthode « monde » continue de les aligner
+sur X (x=0.2685 et 0.3315, même z=1.2000) : écart 44.55 mm, le maximum
+de la série. La formule qui relie tout, vérifiée par les trois écarts
+imprimés : l'écart vaut IPD × sin(θ/2), où θ est l'angle entre droite_tete
+et l'axe du monde — 63 × sin(0°) = 0,00 mm, 63 × sin(15°) = 16,31 mm,
+63 × sin(45°) = 44,55 mm. L'écart croît avec l'angle de la tête, et la
+méthode « monde » n'a aucun moyen de le savoir : elle ne lit jamais le q.
+
+Ce qu'un visiteur sentirait : la méthode « monde » attache les écrans à la
+pièce, pas à la tête — et c'est le casque qui est sur la tête. À la pose
+neutre, rien à dire ; dès qu'on roule la tête de 30°, les deux images
+sont décalées l'une vers le bas, l'autre vers le haut, par rapport à ce
+que les yeux attendent : la stéréoscopie est faussée de 16 mm — les
+objets changent de profondeur perçue en tournant la tête, le monde
+« respire » de travers. À lacet 90, c'est pire : les deux écrans sont
+alignés sur l'axe du regard, un devant l'autre — l'œil gauche regarde un
+monde vu de l'avant, l'œil droit le même vu de l'arrière ; la fusion
+stéréo s'effondre, la profondeur se retourne ou se dédouble, et le
+vertige s'installe en quelques secondes (nausée classique du casque mal
+calé). La méthode « tête » — yeux à ± droite_tete × 31,5 mm, l'axe
+embarqué avec le q de la pose — est la seule qui tienne la paire
+d'images solidement attachée aux yeux qui les regardent : écart nul par
+construction, quelle que soit la pose.

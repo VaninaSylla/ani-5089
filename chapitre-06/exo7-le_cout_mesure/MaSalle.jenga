@@ -1,0 +1,58 @@
+# Fichier de projet Jenga pour exo7-le_cout_mesure (sprint 6)
+# Conforme au projet de depart MaSalle : kit R3D, console (les printf se
+# voient). MaSalle.jenga est la copie livree de ce meme fichier — c'est lui
+# qui porte le optimize("Speed") du Release, exigible au niveau de user3d().
+import sys
+
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+KIT_ROOT = r"C:\Users\ngono\Desktop\ani-5089\Kits\R3D"
+
+with workspace("Exo7Wks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    useconfig(KIT_ROOT + "/R3D.jenga")
+
+    with project("Exo7Cout"):
+        consoleapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["cout.cpp"])
+
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+
+        user3d()
+
+        # Le mesureur compare Debug et Release : c'est ici que le Release
+        # demande la vitesse au compilateur (au meme niveau que user3d()).
+        # Sans cette ligne, la configuration Release ne serait qu'un Debug
+        # sans debogueur — et les douze lignes de mesures.txt le diraient.
+        # NDEBUG avec le meme filter : cout.cpp imprime le nom de sa
+        # configuration a partir de cette macro (le compilateur ne la pose
+        # pas tout seul ici).
+        with filter("config:Release"):
+            optimize("Speed")
+            defines(["NDEBUG"])
+
+        # Le kit a ete compile avec un autre llvm-mingw que le notre :
+        # libc++ est embarquee a la fois dans NKGLSlang.lib et dans libc++.a.
+        # Les symboles sont identiques ; on laisse passer les definitions
+        # multiples (meme raison que MaSalle et chapitre-05).
+        ldflags(["-Wl,--allow-multiple-definition"])
+
+        with filter("system:Windows"):
+            ldflags(["-static"])
+
+        objdir("%{wks.location}/Build/Obj/%{cfg.buildcfg}-%{cfg.system}/%{prj.name}")
+        targetdir("%{wks.location}/Build/Bin/%{cfg.buildcfg}-%{cfg.system}/%{prj.name}")
+
+        usetoolchain("clang-mingw")

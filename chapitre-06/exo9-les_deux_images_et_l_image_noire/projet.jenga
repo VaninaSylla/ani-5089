@@ -1,0 +1,61 @@
+﻿# Fichier de projet Jenga pour exo9-les_deux_images_et_l_image_noire (sprint 6)
+# Conforme au projet de depart MaSalle : kit R3D, console (les printf se
+# voient), et copie des nuanceurs a cote de l'executable.
+import sys
+
+from Jenga import *
+from Jenga.GlobalToolchains import RegisterJengaGlobalToolchains
+
+KIT_ROOT = r"C:\Users\ngono\Desktop\ani-5089\Kits\R3D"
+
+with workspace("Exo9Wks", location="."):
+    RegisterJengaGlobalToolchains()
+    configurations(["Debug", "Release"])
+    targetoses([TargetOS.WINDOWS])
+    targetarchs([TargetArch.X86_64])
+
+    useconfig(KIT_ROOT + "/R3D.jenga")
+
+    with project("Exo9Yeux"):
+        consoleapp()
+        language("C++")
+        cppdialect("C++17")
+        location(".")
+        files(["deux-yeux.cpp"])
+
+        defines([
+            "_CRT_SECURE_NO_WARNINGS",
+            "WIN32_LEAN_AND_MEAN",
+            "NOMINMAX",
+        ])
+
+        user3d()
+
+        # Le kit a ete compile avec un autre llvm-mingw que le notre :
+        # libc++ est embarquee a la fois dans NKGLSlang.lib et dans libc++.a.
+        # Les symboles sont identiques ; on laisse passer les definitions
+        # multiples (meme raison que MaSalle et chapitre-05).
+        ldflags(["-Wl,--allow-multiple-definition"])
+
+        with filter("system:Windows"):
+            ldflags(["-static"])
+
+        # NKRenderer lit ses nuanceurs RELATIFS AU DOSSIER COURANT : on les
+        # copie depuis le kit, dans le dossier du projet et a cote de
+        # l'executable (on lance depuis Build/Bin/...).
+        _COPIE = ('"' + sys.executable + '" -c "import shutil, sys; '
+                  'shutil.copytree(sys.argv[1], sys.argv[2], dirs_exist_ok=True)" '
+                  '"' + KIT_ROOT + '/Resources/NKRenderer/Shaders" ')
+        postbuild([
+            _COPIE + '"%{wks.location}/Resources/NKRenderer/Shaders"',
+            _COPIE + '"%{wks.location}/Build/Bin/%{cfg.buildcfg}-%{cfg.system}/%{prj.name}'
+                     '/Resources/NKRenderer/Shaders"',
+        ])
+
+        objdir("%{wks.location}/Build/Obj/%{cfg.buildcfg}-%{cfg.system}/%{prj.name}")
+        targetdir("%{wks.location}/Build/Bin/%{cfg.buildcfg}-%{cfg.system}/%{prj.name}")
+
+        usetoolchain("clang-mingw")
+
+
+

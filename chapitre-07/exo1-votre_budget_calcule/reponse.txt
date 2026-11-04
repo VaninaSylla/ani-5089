@@ -1,11 +1,11 @@
 La fréquence de mon écran :
 
-Mon écran fonctionne à 60 Hz.
+Mon écran fonctionne à 60 Hz (période ~16.67 ms).
 
 La cadence que je tiens :
 
-Avec l'attente de l'écran, je tiens environ 60 images par seconde. Sans attente, je suis limité par le CPU/GPU.
+Avec l'attente de l'écran je tiens environ 60 Hz. Sans attente (NK_VK_MAILBOX=1), la salle va plus vite mais le rythme est moins synchrone.
 
 Ce que dit le maximum :
 
-Le maximum montre les pics de latence. Même si la moyenne est proche du budget, les pics dépassent le budget d'une image à 90 Hz.
+Le maximum dépasse le budget de 90 Hz (11.111 ms). Même si la moyenne est proche, les pics montrent qu'on ne tient pas toujours le budget.

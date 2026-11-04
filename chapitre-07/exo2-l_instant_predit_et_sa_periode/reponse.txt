@@ -1,0 +1,11 @@
+Ce qui est stable :
+
+L'écart entre maintenant et prédit reste constant s'il y a une période stable.
+
+Un divisé par la cadence :
+
+La période vaut 1000/frequence. A 72Hz 13.889ms, a 60Hz 16.667ms, a 90Hz 11.111ms, a 120Hz 8.333ms.
+
+La période de mon écran :
+
+D'après les mesures, mon écran est autour de 60 Hz.

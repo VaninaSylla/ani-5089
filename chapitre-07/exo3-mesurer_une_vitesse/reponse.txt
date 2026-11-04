@@ -1,0 +1,11 @@
+﻿La série programmée :
+
+Très stable : le lacet suit l'horloge à 30 deg/s, et la vitesse mesurée vaut (0.0, 30.0, 0.0) deg/s sur les 20 images, avec un dt stable autour de 17-19 ms (60 Hz). Il n'y a pratiquement pas de bruit : la série programmée est une ligne droite.
+
+La série à la souris :
+
+Non uniforme : la vitesse oscille fortement d'une image à l'autre (x entre -20 et -276 deg/s, y autour de +/- 60 deg/s, z proche de 0), avec un dt stable autour de 16-18 ms. La souris n'est jamais à vitesse constante : le mouvement réel est haché et irrégulier.
+
+D'où vient le bruit :
+
+Le bruit vient de la souris, pas du calcul : la série programmée à l'horloge est parfaitement stable (30 deg/s constant) alors que la série à la souris est bruyante, avec le même dt et le même calcul de vitesse. Le bruit provient des mesures brutes de la souris (deltas irréguliers image par image) et du fait qu'une main ne maintient pas une vitesse rigoureusement constante. Comme les deux séries utilisent exactement le même code de calcul, la différence de stabilité confirme que le bruit est d'origine mesure (souris), pas algorithme.

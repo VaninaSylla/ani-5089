@@ -1,0 +1,11 @@
+Où il gagne :
+
+Le modele a acceleration gagne sur les trois gestes cosinusoïdaux (lent, rapide, demi-tour), en moyenne et en maximum. Exemple : sur le rapide, l'erreur moyenne passe de 0,21 deg a 0,11 deg et le max de 0,52 a 0,27 deg ; sur le demi-tour, de 0,67 a 0,35 deg en moyenne et de 1,85 a 0,97 deg en max. En integrant l'acceleration estimee sur trois poses, il compense mieux la courbe de vitesse des gestes qui accelerent puis freinent.
+
+Où il perd :
+
+Sur l'arret brusque : le modele a acceleration est legerement moins bon en moyenne (0,03 deg contre 0,02 deg pour la vitesse constante), avec un maximum identique (0,83 deg). C'est le seul enregistrement ou l'acceleration n'apporte rien, et fait marginalement pire.
+
+Pourquoi là :
+
+A l'arret net, l'acceleration reelle est theoriellement infinie (discontinuite de vitesse), alors que le modele estime une acceleration finie a partir de trois poses discretees. Cette estimation est bruyante et peut sur- ou sous-estimer le freinage, donc l'ajout du terme 0.5*acc*t² introduit du bruit là ou le modele a vitesse constante se contente de prolonger la derniere vitesse, qui est juste juste avant l'arret. Le modele a acceleration perd donc precisement là ou sa supposition (acceleration estimee fiable sur trois poses) cesse d'etre valide : aux discontinuites brusques.

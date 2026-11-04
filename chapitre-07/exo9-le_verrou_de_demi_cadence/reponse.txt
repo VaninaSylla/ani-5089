@@ -1,0 +1,11 @@
+Les deux ecarts types :
+
+Sans verrou, l'ecart type est de 9,71 ms (moyenne 17,01 ms, max 280,47 ms) : le rythme est irrégulier, il ne tient pas la periode de l'ecran (16,67 ms) et comporte des pointes. Avec le verrou, l'ecart type tombe a 2,39 ms (moyenne 34,70 ms, max 55,15 ms) : le rythme est quatre fois plus stable et calé exactement sur deux periodes d'ecran, soit la demi-cadence (~30 images/seconde pour un ecran a 60 Hz).
+
+Ce que coute le verrou :
+
+Le verrou divise la cadence par deux : on passe de ~60 images/seconde (quand la salle tient) a ~30 images/seconde. C'est le prix de la stabilite : on sacrifie la frequence brute pour obtenir un rythme regulier que le compositeur (ou l'ecran) peut lisser.
+
+La decision du moteur :
+
+Elle est justifiee par ces mesures : un rythme stable a 34,70 ms (ecart type 2,39 ms) vaut mieux qu'un rythme oscillant autour de 17 ms mais instable (ecart type 9,71 ms, pointes a 280 ms). Un casque affiche chaque image ; une cadence basse et stable est preferable a une cadence haute et irrégulière qui provoque des saccades visibles. Ce qu'un ecran de bureau ne montre pas, lui : un bureau ne fait pas de reprojection, donc il ne subit pas la déchirure des bords qu'un casque produit a chaque image manquée. La decision mesuree sur un vrai casque se verifie donc bien sur un ecran, au niveau de la regularite.

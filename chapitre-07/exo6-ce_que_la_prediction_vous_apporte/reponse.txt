@@ -1,0 +1,11 @@
+Mes deux gestes :
+
+Pour mes deux gestes au choix, j'ai pris un geste lent (30 deg sur 800 ms, calme) et un demi-tour brusque (180 deg sur 200 ms, rapide), en plus du quart de tour imposé (90 deg en 400 ms). Le lent est peu dynamique pour montrer le cas favorable ; le demi-tour est rapide et bref pour montrer le cas difficile.
+
+Où elle aide le moins :
+
+Sur le demi-tour (180 deg en 200 ms) : c'est là que le rapport est le plus bas (4,64), contre 9,40 sur le rapide et 80,20 sur le lent. La prédiction y réduit l'erreur de 12,00 deg à 2,58 deg, mais c'est le rapport le plus faible.
+
+Pourquoi là :
+
+Le modèle suppose la vitesse constante sur une période. Le demi-tour est le geste le plus rapide (180 deg en seulement 200 ms) avec une forte accélération en début et un fort freinage à la fin (forme cosinusoïdale douce). Pendant ces phases, la vitesse n'est pas constante : l'extrapolation à vitesse constante se trompe, donc la prédiction y apporte le moins. À l'inverse, le geste lent est presque à vitesse constante, d'où le rapport énorme (80,20).

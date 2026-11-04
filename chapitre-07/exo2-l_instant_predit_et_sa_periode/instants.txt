@@ -1,24 +1,24 @@
-maintenant = 0.0 ms, predit = 13.9 ms, ecart = 13.9 ms
-maintenant = 13.9 ms, predit = 27.8 ms, ecart = 13.9 ms
-maintenant = 27.8 ms, predit = 41.7 ms, ecart = 13.9 ms
-maintenant = 41.7 ms, predit = 55.6 ms, ecart = 13.9 ms
-maintenant = 55.6 ms, predit = 69.4 ms, ecart = 13.9 ms
-maintenant = 69.4 ms, predit = 83.3 ms, ecart = 13.9 ms
-maintenant = 83.3 ms, predit = 97.2 ms, ecart = 13.9 ms
-maintenant = 97.2 ms, predit = 111.1 ms, ecart = 13.9 ms
-maintenant = 111.1 ms, predit = 125.0 ms, ecart = 13.9 ms
-maintenant = 125.0 ms, predit = 138.9 ms, ecart = 13.9 ms
-maintenant = 138.9 ms, predit = 152.8 ms, ecart = 13.9 ms
-maintenant = 152.8 ms, predit = 166.7 ms, ecart = 13.9 ms
-maintenant = 166.7 ms, predit = 180.6 ms, ecart = 13.9 ms
-maintenant = 180.6 ms, predit = 194.4 ms, ecart = 13.9 ms
-maintenant = 194.4 ms, predit = 208.3 ms, ecart = 13.9 ms
-maintenant = 208.3 ms, predit = 222.2 ms, ecart = 13.9 ms
-maintenant = 222.2 ms, predit = 236.1 ms, ecart = 13.9 ms
-maintenant = 236.1 ms, predit = 250.0 ms, ecart = 13.9 ms
-maintenant = 250.0 ms, predit = 263.9 ms, ecart = 13.9 ms
-maintenant = 263.9 ms, predit = 277.8 ms, ecart = 13.9 ms
-hz = 72, periode = 13.889 ms, reel - predit = 6.94 ms
-hz = 60, periode = 16.667 ms, reel - predit = 8.33 ms
-hz = 90, periode = 11.111 ms, reel - predit = 5.56 ms
-hz = 120, periode = 8.333 ms, reel - predit = 4.17 ms
+maintenant = 3.5 ms, predit = 17.3 ms, ecart = 13.9 ms
+maintenant = 339.2 ms, predit = 353.1 ms, ecart = 13.9 ms
+maintenant = 348.3 ms, predit = 362.1 ms, ecart = 13.9 ms
+maintenant = 354.6 ms, predit = 368.5 ms, ecart = 13.9 ms
+maintenant = 360.8 ms, predit = 374.7 ms, ecart = 13.9 ms
+maintenant = 369.4 ms, predit = 383.3 ms, ecart = 13.9 ms
+maintenant = 378.1 ms, predit = 392.0 ms, ecart = 13.9 ms
+maintenant = 392.0 ms, predit = 405.9 ms, ecart = 13.9 ms
+maintenant = 408.7 ms, predit = 422.6 ms, ecart = 13.9 ms
+maintenant = 414.3 ms, predit = 428.2 ms, ecart = 13.9 ms
+maintenant = 428.8 ms, predit = 442.7 ms, ecart = 13.9 ms
+maintenant = 445.8 ms, predit = 459.7 ms, ecart = 13.9 ms
+maintenant = 479.3 ms, predit = 493.2 ms, ecart = 13.9 ms
+maintenant = 499.3 ms, predit = 513.2 ms, ecart = 13.9 ms
+maintenant = 513.0 ms, predit = 526.8 ms, ecart = 13.9 ms
+maintenant = 528.7 ms, predit = 542.6 ms, ecart = 13.9 ms
+maintenant = 546.5 ms, predit = 560.3 ms, ecart = 13.9 ms
+maintenant = 562.9 ms, predit = 576.8 ms, ecart = 13.9 ms
+maintenant = 579.6 ms, predit = 593.5 ms, ecart = 13.9 ms
+maintenant = 594.9 ms, predit = 608.8 ms, ecart = 13.9 ms
+hz = 72, periode = 13.889 ms, reel - predit = 2.82 ms
+hz = 60, periode = 16.667 ms, reel - predit = 1.27 ms
+hz = 90, periode = 11.111 ms, reel - predit = 6.82 ms
+hz = 120, periode = 8.333 ms, reel - predit = 9.63 ms

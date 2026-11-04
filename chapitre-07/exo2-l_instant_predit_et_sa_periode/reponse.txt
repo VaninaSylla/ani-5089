@@ -1,11 +1,11 @@
 Ce qui est stable :
 
-L'écart entre maintenant et prédit reste constant s'il y a une période stable.
+Ce qui est stable, c'est l'écart entre maintenant et prédit : il reste constant à une période (13,9 ms à 72 Hz), parce que prédit = maintenant + période avec une période fixe. Ce qui n'est pas stable, c'est le décalage reel − predit entre le début réel de l'image suivante et l'instant prédit à l'image d'avant : cet écart dérive car l'écran livre à 60 Hz alors que la prédiction suppose la période demandée (72/90/120 Hz).
 
 Un divisé par la cadence :
 
-La période vaut 1000/frequence. A 72Hz 13.889ms, a 60Hz 16.667ms, a 90Hz 11.111ms, a 120Hz 8.333ms.
+Vérifié sur les quatre cadences : 72 Hz → 13,889 ms, 60 Hz → 16,667 ms, 90 Hz → 11,111 ms, 120 Hz → 8,333 ms. La période vaut bien 1000 / fréquence, en millisecondes.
 
 La période de mon écran :
 
-D'après les mesures, mon écran est autour de 60 Hz.
+D'après les écarts réels reel − predit (1,27 ms à 60 Hz, 2,82 ms à 72 Hz, 6,82 ms à 90 Hz, 9,63 ms à 120 Hz), l'écran livre à 60 Hz : une image toutes les 16,66 ms. Le prédit suppose une période plus courte que la réalité quand on demande 72/90/120 Hz, donc chaque image suivante démarre plus tard que prévu, d'autant que la période demandée est courte.

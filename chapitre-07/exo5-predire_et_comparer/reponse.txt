@@ -1,0 +1,11 @@
+Le gain :
+
+Le rapport des deux moyennes vaut 2,06 / 0,93 ≈ 2,2 : avec prédiction, l'erreur moyenne tombe de 2,06 deg à 0,93 deg, soit une réduction de plus de moitié. La prédiction réduit donc l'erreur, mais le gain mesuré ici est d'environ 2,2, pas de 10.
+
+D'où vient l'erreur qui reste :
+
+Le modèle suppose la vitesse constante sur une période, or la souris accélère et décélère sans cesse ; de plus, les deltas souris sont quantifiés (quelques unités par image), donc la vitesse estimée est bruyante. Extrapoler une vitesse bruitée sur une période entière laisse une erreur résiduelle (moyenne 0,93 deg, max 7,36 deg), surtout aux instants où la vitesse change brusquement.
+
+Le facteur dix :
+
+L'affirmation d'un gain « d'un facteur dix ou plus » n'est pas vérifiée sur mes chiffres (gain ≈ 2,2). Ce facteur dépend du geste : sur un mouvement rapide et régulier, le gain serait plus grand ; sur ma souris hachée et à faible vitesse, l'erreur sans prédiction est déjà petite (2,06 deg), donc la marge de progression de la prédiction est limitée.

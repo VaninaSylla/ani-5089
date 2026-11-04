@@ -1,0 +1,11 @@
+Où elle cesse de rattraper :
+
+La prédiction rattrape la latence tant que l'horizon reste dans le domaine de validite du modele (vitesse constante). Mesurees : a 0 ms l'erreur avec prediction est de 0,15 deg (contre 1,40 sans), a 40 ms elle est de 1,52 deg (contre 5,62), mais a 80 ms elle monte a 4,21 deg (contre 9,84). Au-dela d'environ 80-100 ms, l'erreur residuale devient comparable a celle qu'on aurait sans prediction, et la borne de 100 ms est atteinte : le modele « vitesse constante » ment plus qu'il n'aide.
+
+L'horizon sans borne :
+
+Sans la borne, l'horizon pour l'echantillon le plus proche de t=1,2 s (latence 1 s) vaut 875 ms (la latence d'une seconde moins une periode, discretisee sur le tampon de 64 poses). Extrapoler a vitesse constante sur près d'une seconde projette le lacet bien au-dela du vrai : -9,4 deg predit contre 90,0 deg vrai. Le monde partirait dans la direction opposee sur une image.
+
+Ce que verrait le casque :
+
+Sans la borne, un décrochage ou une latence d'une seconde ferait sauter le monde : l'image predite serait placee a l'oppose de la vraie (ici -9,4 deg au lieu de 90 deg), puis reviendrait a l'image suivante. C'est le sursaut isolé et imprevisible qui rend un casque inutilisable. Avec la borne (78,2 deg contre 90 deg), l'erreur reste faible et le monde reste stable.

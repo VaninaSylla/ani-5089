@@ -1,0 +1,15 @@
+L'image fautive :
+
+C'est l'image 742, à lacet = 270,3 deg. Elle se distingue de toutes les autres par delta.w = -1,0000 (alors que chaque image alentour a delta.w = +1,0000) : la vitesse y passe de +20,0 deg/s à -20,0 deg/s, une seule image, puis revient à +20,0 à l'image 743.
+
+Le rapport :
+
+Le rapport de la vitesse fautive à celle de l'image d'avant est -20,0 / +20,0 = -1 : même magnitude, signe exactement opposé.
+
+Pourquoi à ce lacet :
+
+À 270 deg de lacet, la conversion de la matrice de rotation en quaternion (NkQuatf(rotation).Normalized()) bascule le signe de sa composante w : un quaternion et son opposé décrivent la même rotation, mais le constructeur matrice change de branche et renvoie soudain -q au lieu de q. Comme le test if (delta.w < 0.f) a été retiré, delta.w est négatif, le delta est interprété comme la rotation « longue » (presque un tour complet dans l'autre sens), et delta.Axis() près de l'identité renvoie une axe instable : la vitesse mesurée devient fausse sur cette seule image.
+
+Ce qu'aurait vu le casque :
+
+Sur l'image prédite, le monde sursaute : une très légère rotation de la tête est interprétée comme un tour presque complet à grande vitesse, l'image part violemment dans la direction opposée pendant une image, puis revient. C'est le sursaut inexpliqué et sporadique qui rend un casque inutilisable.

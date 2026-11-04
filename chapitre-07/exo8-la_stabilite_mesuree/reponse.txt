@@ -1,0 +1,11 @@
+Le nombre qui compte :
+
+L'ecart type (et le maximum), pas la moyenne. Avec l'attente de l'ecran, l'ecart type est de 5,51 ms et le maximum atteint 281,52 ms ; sans attente, 5,03 ms d'ecart type et 310,38 ms de maximum. Dans un casque, chaque image est affichée a son heure : une seule image en retard (un pic) provoque une saccade ou une reprojection visible. Une moyenne de 16,7 ms peut sembler acceptable alors que des pointes a 281 ms ruinent l'experience. C'est l'ecart type qui revele cette instabilité.
+
+Pourquoi pas la moyenne :
+
+La moyenne masque les pics. Les deux mesures ont une moyenne proche (16,78 vs 16,74 ms) et toutes les images depassent le budget de 90 hertz (11,11 ms) parce que l'ecran est a 60 Hz. Pourtant, l'ecart type et le maximum montrent que le rythme n'est pas stable : sans l'ecran, le maximum monte meme a 310 ms. Une moyenne lisse ces anomalies et ne dit rien du nombre d'images en retard, qui est ce qu'un casque subit vraiment.
+
+Ce que l'ecran change :
+
+Avec l'attente de l'ecran (vsync), le pilote calque chaque Present sur le rafraîchissement de l'afficheur, donc le rythme est bloqué a ~60 Hz (16,7 ms) et l'ecart type est de 5,51 ms. Sans attente (NK_VK_MAILBOX=1), le Present ne bloque plus, mais sous OpenGL le pilote continue d'attendre le vblank, donc la cadence reste autour de 16,7 ms avec un ecart type legerement plus faible (5,03 ms) et un maximum plus eleve (310 ms). L'ecran fixe le rythme ; sans lui, on ne mesure plus le budget du casque mais la regularite brute du rendu.

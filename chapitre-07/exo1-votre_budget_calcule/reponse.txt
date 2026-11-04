@@ -1,11 +1,11 @@
 La fréquence de mon écran :
 
-Mon écran fonctionne à 60 Hz (période ~16.67 ms).
+La mesure donne une médiane à 16,66 ms par image, soit environ 60 Hz. L'écran tourne donc à 60 Hz (budget 16,667 ms/image), ce qui correspond aux réglages d'affichage de Windows.
 
 La cadence que je tiens :
 
-Avec l'attente de l'écran je tiens environ 60 Hz. Sans attente (NK_VK_MAILBOX=1), la salle va plus vite mais le rythme est moins synchrone.
+Avec l'attente de l'écran, la salle tient environ 60 Hz (moyenne 19,57 ms, médiane 16,66 ms), bien au-dessus du budget de 90 Hz (11,111 ms). Elle ne tient donc pas 90 Hz, ni 72 Hz (13,889 ms) de façon constante : la moyenne dépasse déjà le budget 72 Hz. Sans attente (NK_VK_MAILBOX=1), elle reste autour de 16,72 ms de moyenne — le pilote OpenGL bloque toujours sur Present vers ~60 Hz, donc la cadence réelle ne monte pas au-delà.
 
 Ce que dit le maximum :
 
-Le maximum dépasse le budget de 90 Hz (11.111 ms). Même si la moyenne est proche, les pics montrent qu'on ne tient pas toujours le budget.
+Le maximum révèle ce que la moyenne cache : avec l'attente de l'écran une image monte à 757,90 ms, et sans attente à 52,23 ms. Une moyenne peut sembler proche d'un budget alors qu'une seule image en retard suffit à provoquer une saccade (ou une reprojection en casque). Le maximum montre que le rythme n'est pas stable : un casque affiche chaque image, pas la moyenne, donc ces pointes sont directement visibles.

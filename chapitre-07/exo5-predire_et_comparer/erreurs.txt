@@ -1,0 +1,2 @@
+avec prediction : moyenne 0.93 deg, max 7.36 deg, sur 1000 images
+sans prediction : moyenne 2.06 deg, max 10.49 deg, sur 1000 images

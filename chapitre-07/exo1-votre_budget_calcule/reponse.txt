@@ -1,0 +1,11 @@
+La fréquence de mon écran :
+
+Mon écran fonctionne à 60 Hz.
+
+La cadence que je tiens :
+
+Avec l'attente de l'écran, je tiens environ 60 images par seconde. Sans attente, je suis limité par le CPU/GPU.
+
+Ce que dit le maximum :
+
+Le maximum montre les pics de latence. Même si la moyenne est proche du budget, les pics dépassent le budget d'une image à 90 Hz.

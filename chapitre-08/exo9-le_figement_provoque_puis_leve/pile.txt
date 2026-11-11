@@ -1,0 +1,8 @@
+Pile du fil principal (lldb, thread #1), arrete pendant l'attente du tampon 0 :
+
+* frame #0: void std::__1::condition_variable::wait<(anonymous namespace)::Carte::AttendreTampon(int)::lambda>(std::unique_lock<std::mutex>&, lambda) at condition_variable.h:112
+  frame #1: (anonymous namespace)::Carte::AttendreTampon(this=..., tampon=0) at cible.cpp:46
+  frame #2: main at cible.cpp:107
+  frame #3: __tmainCRTStartup at crtexe.c:266
+  frame #4: kernel32.dll`BaseThreadInitThunk + 23
+  frame #5: ntdll.dll`RtlUserThreadStart + 44

@@ -1,0 +1,9 @@
+tour 1 : emprunt accepte index 0, rendu accepte, a soumettre 0
+tour 2 : emprunt accepte index 1, rendu accepte, a soumettre 1
+tour 3 : emprunt accepte index 2, rendu accepte, a soumettre 2
+tour 4 : emprunt accepte index 0, rendu accepte, a soumettre 0
+tour 5 : emprunt accepte index 1, rendu accepte, a soumettre 1
+tour 6 : emprunt accepte index 2, rendu accepte, a soumettre 2
+double emprunt : premier accepte, second REFUSE
+rendu sans emprunt : REFUSE
+chaine de 5 images : REFUSE

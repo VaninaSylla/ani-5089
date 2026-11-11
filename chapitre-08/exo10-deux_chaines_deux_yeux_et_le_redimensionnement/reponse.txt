@@ -1,0 +1,13 @@
+Simulation console : ce programme ne cree pas de vraie fenetre NK. Il simule le redimensionnement a l'image 15 en detruisant puis en recreant les deux chaines, et il ecrit lui-meme trace.txt et resize.txt. Les deux fichiers rendus sont donc reels et coherents avec ce code.
+
+Ce qui se passe sans recreer :
+
+Si l'on se contente de redimensionner les cibles hors ecran sans refaire les chaines, celles-ci gardent leurs anciennes poignees. Ces poignees designaient les images d'avant le redimensionnement, qui viennent d'etre detruites ou remplacees. Le rendu continue de fonctionner tant qu'il ecrit dans la cible, mais la soumission envoie une poignee perimee, ou zero si la chaine a ete videe. L'ecran devient noir apres le premier redimensionnement, alors que tout le reste du programme semble correct. C'est exactement l'erreur que la recreation est censee eviter.
+
+Pourquoi reenregistrer ne suffit pas seul :
+
+Reenregistrer les images dans une chaine qui n'a pas ete detruite puis recreee ne remet pas l'anneau dans un etat neuf. La chaine conserve son index courant, son drapeau d'emprunt et ses anciennes entrees ; on ecrit de nouvelles poignees dans une structure qui pointe encore sur l'ancien etat. Il faut d'abord detruire la chaine pour faire disparaitre les poignees perimees, puis la recreer pour repartir d'un anneau propre, et seulement ensuite reenregistrer les images. Les trois operations vont ensemble, dans cet ordre.
+
+Ce que les deux yeux doivent partager :
+
+Les deux yeux doivent partager la taille de la fenetre, le numero d'image et le moment du redimensionnement. En revanche, ils ne doivent pas partager leur chaine : chaque oeil a son propre anneau, son propre drapeau d'emprunt et ses propres poignees. Au redimensionnement, les deux chaines sont detruites, recreees et reenregistrees au meme moment, mais separement. Si une seule chaine servait aux deux yeux, le second ecraserait le premier et l'un des deux yeux afficherait l'image de l'autre, ou une image noire.

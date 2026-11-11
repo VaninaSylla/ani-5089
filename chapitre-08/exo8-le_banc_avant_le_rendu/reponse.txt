@@ -1,0 +1,7 @@
+Ce que le banc refuse :
+
+Le banc fait d'abord tourner un anneau de trois images pendant six tours. La sortie montre les index 0, 1, 2, puis de nouveau 0, 1, 2 : l'anneau boucle au quatrieme tour et la derniere image rendue est bien l'index 2. Il eprouve ensuite les trois refus. Le double emprunt est refuse : le premier AcquireImage est accepte, le second rend false, et le rendu qui suit est accepte. Le rendu sans emprunt est refuse : ReleaseImage rend false quand aucune image n'est sortie. Enfin, la creation d'une chaine de cinq images est refusee, car le maximum est de quatre, et l'emprunt sur cette chaine invalide est refuse lui aussi. Ces refus ne plantent pas : les methodes rendent false et laissent l'appelant decider.
+
+Pourquoi un simulateur permissif serait pire :
+
+Un simulateur permissif laisserait passer exactement les fautes que le vrai runtime sanctionne. Le code ecrit chez lui semblerait juste, puis casserait sur le casque, la ou l'on dispose de moins d'outils et de moins de temps. Il masquerait en particulier le double emprunt et le rendu sans emprunt, deux erreurs qui produisent des images noires une fois sur deux ou des blocages sans message. Le simulateur ne doit donc pas seulement imiter le dessin : il doit appliquer la meme discipline que le materiel, pour que la faute soit impossible a ecrire et attrapable au debogage, sur le bureau, avant de porter le casque.

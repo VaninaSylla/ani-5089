@@ -1,0 +1,6 @@
+detruit chaine gauche
+detruit chaine droite
+recree chaine gauche
+recree chaine droite
+reenregistre images gauche
+reenregistre images droite

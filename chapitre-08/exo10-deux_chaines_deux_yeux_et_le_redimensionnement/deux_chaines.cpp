@@ -1,3 +1,10 @@
+#include "NKWindow/NKMain.h"
+#include "NKWindow/Core/NkWindow.h"
+#include "NKWindow/Core/NkWindowConfig.h"
+#include "NKEvent/NkEventSystem.h"
+#include "NKEvent/NkWindowEvent.h"
+#include "NKTime/NkChrono.h"
+
 #include <cstdint>
 #include <cstdio>
 
@@ -90,15 +97,41 @@ void EnregistrerImages(ChaineEchange &chaine, std::uint64_t base,
     }
 }
 
+void RecreerLesChaines(ChaineEchange &gauche, ChaineEchange &droit,
+                       std::uint32_t images, std::FILE *resize) {
+    gauche.Destroy();
+    std::fprintf(resize, "detruit chaine gauche\n");
+    droit.Destroy();
+    std::fprintf(resize, "detruit chaine droite\n");
+
+    gauche.Create(images, "oeil gauche");
+    std::fprintf(resize, "recree chaine gauche\n");
+    droit.Create(images, "oeil droit");
+    std::fprintf(resize, "recree chaine droite\n");
+
+    EnregistrerImages(gauche, 0x3000, images);
+    std::fprintf(resize, "reenregistre images gauche\n");
+    EnregistrerImages(droit, 0x4000, images);
+    std::fprintf(resize, "reenregistre images droite\n");
+    std::fflush(resize);
+}
+
+static void ConfigureAppData(nkentseu::NkAppData &d) {
+    d.appName = "Exo10DeuxChaines";
+}
+NK_REGISTER_ENTRY_APPDATA_UPDATER(ConfigureAppData)
+
 }  // namespace
 
-int main() {
+int nkmain(const nkentseu::NkEntryState &state) {
+    (void)state;
+
     const std::uint32_t images = 3;
     const int nombreTrames = 30;
     const int trameRedimension = 15;
 
-    std::FILE *trace = std::fopen("trace.txt", "w");
-    std::FILE *resize = std::fopen("resize.txt", "w");
+    std::FILE *trace = std::fopen("trace.txt", "wb");
+    std::FILE *resize = std::fopen("resize.txt", "wb");
     if (trace == nullptr || resize == nullptr) {
         return 1;
     }
@@ -110,28 +143,63 @@ int main() {
     EnregistrerImages(gauche, 0x1000, images);
     EnregistrerImages(droit, 0x2000, images);
 
-    for (int image = 1; image <= nombreTrames; ++image) {
+    nkentseu::NkWindowConfig cfg;
+    cfg.title = "Exo10 - deux chaines et le redimensionnement";
+    cfg.width = 640;
+    cfg.height = 360;
+    cfg.centered = true;
+    cfg.resizable = true;
+    cfg.vsync = false;
+
+    nkentseu::NkWindow fenetre(cfg);
+    if (!fenetre.IsValid()) {
+        std::fprintf(stderr, "la fenetre n'a pas pu s'ouvrir\n");
+        std::fclose(trace);
+        std::fclose(resize);
+        return 1;
+    }
+
+    bool ferme = false;
+    bool resizeDemande = false;
+    bool resizeTraite = false;
+
+    auto traiterEvenements = [&]() {
+        nkentseu::NkEvent *ev = nullptr;
+        while (nkentseu::NkEvents().PollEvent(ev)) {
+            if (ev->As<nkentseu::NkWindowCloseEvent>() != nullptr) {
+                ferme = true;
+            }
+            if (ev->As<nkentseu::NkWindowResizeEvent>() != nullptr &&
+                resizeDemande && !resizeTraite) {
+                RecreerLesChaines(gauche, droit, images, resize);
+                resizeTraite = true;
+            }
+        }
+    };
+
+    for (int image = 1; image <= nombreTrames && !ferme; ++image) {
         if (image == trameRedimension) {
-            gauche.Destroy();
-            std::fprintf(resize, "detruit chaine gauche\n");
-            droit.Destroy();
-            std::fprintf(resize, "detruit chaine droite\n");
+            fenetre.SetSize(800, 450);
+            resizeDemande = true;
+            for (int attente = 0; attente < 50 && !resizeTraite && !ferme;
+                 ++attente) {
+                traiterEvenements();
+                if (!resizeTraite) {
+                    nkentseu::NkChrono::SleepMilliseconds(1);
+                }
+            }
+        }
 
-            gauche.Create(images, "oeil gauche");
-            std::fprintf(resize, "recree chaine gauche\n");
-            droit.Create(images, "oeil droit");
-            std::fprintf(resize, "recree chaine droite\n");
-
-            EnregistrerImages(gauche, 0x3000, images);
-            std::fprintf(resize, "reenregistre images gauche\n");
-            EnregistrerImages(droit, 0x4000, images);
-            std::fprintf(resize, "reenregistre images droite\n");
+        traiterEvenements();
+        if (ferme) {
+            break;
         }
 
         std::uint32_t indexGauche = 0;
         std::uint32_t indexDroit = 0;
         if (!TrameOeil(gauche, indexGauche) ||
             !TrameOeil(droit, indexDroit)) {
+            std::fprintf(stderr, "une chaine a refuse une image\n");
             std::fclose(trace);
             std::fclose(resize);
             return 1;
@@ -140,10 +208,18 @@ int main() {
         std::fprintf(trace, "image : %d, gauche : %u, droit : %u\n", image,
                      static_cast<unsigned>(indexGauche),
                      static_cast<unsigned>(indexDroit));
+        std::fflush(trace);
+
+        nkentseu::NkChrono::SleepMilliseconds(16);
     }
 
     std::fclose(trace);
     std::fclose(resize);
+
+    if (ferme) {
+        std::printf("fenetre fermee avant la fin des trente images\n");
+        return 0;
+    }
     std::printf("trente images tracees, redimensionnement a l'image %d\n",
                 trameRedimension);
     return 0;

@@ -1,4 +1,4 @@
-Simulation console : ce programme ne cree pas de vraie fenetre NK. Il simule le redimensionnement a l'image 15 en detruisant puis en recreant les deux chaines, et il ecrit lui-meme trace.txt et resize.txt. Les deux fichiers rendus sont donc reels et coherents avec ce code.
+Fenetre reelle : ce programme cree une vraie fenetre NK (NKWindow), la laisse ouverte pendant trente trames et declenche un vrai redimensionnement a l'image 15 avec NkWindow::SetSize(800, 450). La destruction puis la recreation des deux chaines sont faites dans le traitement de NkWindowResizeEvent. trace.txt et resize.txt sont ecrits pendant l'execution reelle, et non simules.
 
 Ce qui se passe sans recreer :
 
@@ -11,3 +11,5 @@ Reenregistrer les images dans une chaine qui n'a pas ete detruite puis recreee n
 Ce que les deux yeux doivent partager :
 
 Les deux yeux doivent partager la taille de la fenetre, le numero d'image et le moment du redimensionnement. En revanche, ils ne doivent pas partager leur chaine : chaque oeil a son propre anneau, son propre drapeau d'emprunt et ses propres poignees. Au redimensionnement, les deux chaines sont detruites, recreees et reenregistrees au meme moment, mais separement. Si une seule chaine servait aux deux yeux, le second ecraserait le premier et l'un des deux yeux afficherait l'image de l'autre, ou une image noire.
+
+Compilation : jenga build --config Release (voir projet.jenga), puis lancer l'executable depuis ce dossier pour regenerer trace.txt et resize.txt.

@@ -1,0 +1,7 @@
+Ce que dit la colonne change :
+
+'elle ne repond qu'aux instants ou courant vient de basculer, c'est-a-dire au front de saisie quand courant passe de 0 a 1 et au front de relechement quand il passe de 1 a 0. Sur les images 2, 3 et 4, l'action saisir est tenue : courant vaut 1 sur les trois images, mais change ne vaut 1 qu'a l'image 2. Un niveau n'est donc pas une suite de fronts. C'est pour cela qu'une balle se tire sur current && changed, alors qu'un objet se tient sur current seul. La colonne est calculee sur courant et non sur la touche brute : quand une manette s'eteint, courant tombe a faux et change le signale, meme si le doigt n'a pas bouge.
+
+Ce que dit la colonne actif :
+
+'elle dit qu'une source materielle est reellement liee a l'usage demande. Ici saisir et tirer ont actif a 1 sur les six images : ce sont deux actions vivantes. L'action avancer a actif a 0 sur les six images, bien que la touche simulee soit pressee aux images 1, 3 et 5 : elle est morte, rend toujours courant a 0, et ne dit rien d'autre. Sans cette colonne, rien ne distinguerait cette absence de liaison d'un simple bouton releche. C'est la verification a faire une fois au demarrage, avant la demonstration, pour savoir pourquoi un joueur ne peut pas se deplacer.

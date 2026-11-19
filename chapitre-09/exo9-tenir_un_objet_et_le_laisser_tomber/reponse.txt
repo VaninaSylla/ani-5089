@@ -1,0 +1,11 @@
+Ce qui se passe sur le front :
+
+Sur la version fautive, l'objet n'est replace dans la paume qu'a l'image ou courant passe de 0 a 1. Aux images suivantes, courant vaut toujours 1 mais change vaut 0 : la condition current && changed est fausse, la liaison n'est pas refaite, et le cube tombe des que la main bouge. front.png montre le cube en dessous de la paume, deja en train de tomber, alors que le doigt est encore appuye. C'est exactement la difference entre un evenement ponctuel et un etat maintenu.
+
+Ce qui se passe sur le niveau :
+
+Sur la version juste, le cube est replace sur GRIP_POSE, la pose de paume de la main droite, a chaque image ou courant vaut 1. La composition figee a la saisie, attache = posePaume.Inverted() * cube.Pose(), puis cube.SetPose(posePaume * attache), garde le cube precisement la ou il a ete pris, sans sauter au centre de la main. niveau.png montre le cube toujours solidaire de la paume au meme instant du geste. Employez AIM_POSE a la place ferait flotter le cube de quelques centimetres.
+
+Ce que je teste pour lacher :
+
+Je ne lache pas des que courant vaut 0, car une manette eteinte ou un menu ouvert rendent courant faux sans aucun relachement. Je teste actif && !current && changed : la source doit etre liee, courant doit etre faux, et le passage de 1 a 0 doit etre un vrai front. Un simple !current ferait tomber l'objet des que l'application perd le focus.

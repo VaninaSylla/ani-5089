@@ -1,0 +1,11 @@
+Ce que le programme a cru :
+
+A l'image 6, courant est passe de 1 a 0 et change valait 1. Le premier programme, qui ne regardait que courant, a pris ce front pour un relachement du joueur et a fait tomber l'objet. Il a ensuite garde courant a 0 pendant dix images, puis a revu courant a 1 a l'image 16 avec change a 1, comme si le joueur avait saisi de nouveau. Rien dans les trois champs ne portait la cause de cette bascule : une action inactive rend courant faux exactement comme un bouton relache.
+
+Ce qui se passait vraiment :
+
+Le doigt du joueur n'a jamais quitte la gachette. C'est la manette qui s'est eteinte : actif est passe a 0 de l'image 6 a l'image 15, puis est revenu a 1 a l'image 16. journal.txt le montre ligne par ligne. Pendant ces dix images, le systeme ne savait pas si l'utilisateur relachait, retirait le casque, ouvrait un menu ou perdait le focus ; il savait seulement qu'aucune source materielle n'etait plus liee. Un bouton relache et une liaison perdue produisent le meme courant a faux, et c'est actif qui les distingue.
+
+Ce que je teste maintenant :
+
+Je ne lache plus que sur actif && !courant && change, c'est-a-dire une source liee, un courant faux et un vrai front de relachement. Quand actif vaut faux, je ne considere pas cela comme un lacher : je garde l'objet attache a la paume et je suspends les interactions jusqu'au retour de la liaison. Ce choix evite de faire tomber l'objet des qu'une manette s'eteint, ce qui arrive en pratique apres quelques minutes. Il ne prétend pas deviner l'intention du joueur : si le jeu preferait tout mettre en pause des que actif tombe, il pourrait le faire, mais il ne doit jamais confondre cette perte avec un relachement ordinaire.

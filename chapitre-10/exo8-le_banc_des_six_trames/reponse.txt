@@ -1,0 +1,7 @@
+Pourquoi la trame 5 reprend sur l'image 2 :
+
+Les trames 3 et 4 ne dessinent rien, donc l'anneau n'avance pas pendant la pause. A la trame 5, l'index est encore celui de l'image 2.
+
+Pourquoi on finit une trame sans rien dessiner :
+
+La fin de trame est toujours appelee, meme a vide. Sans elle, le systeme reste bloque et ne reprend pas quand le casque est remis.

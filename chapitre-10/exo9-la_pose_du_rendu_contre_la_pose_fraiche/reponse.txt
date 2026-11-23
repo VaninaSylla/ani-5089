@@ -1,0 +1,11 @@
+Ce que la couche dit vraiment :
+
+Elle porte la pose avec laquelle l'image a ete calculee, pas la pose actuelle de la tete au moment de l'affichage.
+
+Ce que le compositeur en fait :
+
+Il compare la pose du rendu avec la vraie pose actuelle et decale l'image pour compenser le mouvement de la tete entre le rendu et l'affichage.
+
+Pourquoi la pose fraiche ne corrige rien :
+
+La pose fraiche est plus vraie, mais elle est fausse pour cette image. La soumettre fait corriger le monde dans le mauvais sens et fait glisser la scene.

@@ -1,0 +1,11 @@
+Ou la boucle s'est arretee :
+
+Pendant la pause, la fin de trame etait appelee seulement quand on rendait. Comme le casque etait pose, rien n'etait dessine, donc la fin de trame n'etait jamais appelee et la boucle restait bloquee.
+
+Pourquoi aucun message n'est apparu :
+
+Le systeme n'emet pas d'erreur quand une fin de trame manque. Il attend simplement la fin pour chaque debut, donc le programme se fige silencieusement.
+
+Ce que je fais maintenant a chaque trame :
+
+J'appelle la fin de trame a chaque tour, y compris quand le casque est pose et qu'il n'y a rien a dessiner, puis je repars quand le rendu reprend.

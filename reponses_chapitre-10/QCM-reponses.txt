@@ -1,0 +1,12 @@
+Série 1 - QCM - La composition et les couches
+
+1. La pose avec laquelle vous avez dessiné.
+2. À la reprojection.
+3. Je ne dessine rien, et j'appelle la fin de trame.
+4. La boucle se bloque.
+5. Que la session les consomme pendant l'appel.
+6. Parce qu'elle est composée en dernier, à pleine résolution, sans passer par votre chaîne de rendu.
+7. Tout est décalé, sans erreur.
+8. Un œil noir, l'autre correct.
+9. Il n'avance pas : la trame 5 reprend là où la trame 2 s'était arrêtée.
+10. L'instant prédit rendu par l'attente de CETTE trame.

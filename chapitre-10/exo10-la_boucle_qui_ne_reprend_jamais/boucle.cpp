@@ -8,14 +8,11 @@ int main() {
         frame++;
         bool render = shouldRender;
 
-        std::cout << "trame : " << frame << ", rend : " << render << ", debut : 1";
+        // FAUTE : fin de trame appelee seulement si on rend.
+        bool fin = render;
 
-        if (render) {
-            // rendu conditionnel
-        }
-
-        // Fin de trame hors du test de rendu.
-        std::cout << ", fin : 1.\n";
+        std::cout << "trame : " << frame << ", rend : " << render
+                  << ", debut : 1, fin : " << fin << ".\n";
 
         if (frame >= 6 && frame <= 10) {
             shouldRender = false;

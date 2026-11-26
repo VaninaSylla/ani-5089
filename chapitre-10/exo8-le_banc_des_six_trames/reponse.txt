@@ -1,7 +1,7 @@
 Pourquoi la trame 5 reprend sur l'image 2 :
 
-Les trames 3 et 4 ne dessinent rien, donc l'anneau n'avance pas pendant la pause. A la trame 5, l'index est encore celui de l'image 2.
+Dans le banc, l'index de l'image ne progresse que quand une trame dessine. Aux trames 3 et 4, `dessiner` est faux, `couches` vaut 0 et `index` reste inchange. A la trame 5, l'index est donc encore 2, ce que `sortie.txt` montre : la trame saute n'emprunte aucune image de l'anneau.
 
 Pourquoi on finit une trame sans rien dessiner :
 
-La fin de trame est toujours appelee, meme a vide. Sans elle, le systeme reste bloque et ne reprend pas quand le casque est remis.
+`finDeTrame()` est appelee a la fin de chaque tour de boucle, en dehors du test `if (dessiner)`. Les trames 3 et 4 soumettent donc zero couche mais ferment quand même la trame. Sans cet appel, le systeme attendrait une fin de trame et ne reprendrait jamais apres une pause.
